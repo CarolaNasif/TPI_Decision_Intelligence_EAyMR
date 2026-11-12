@@ -1,0 +1,44 @@
+# Decision Intelligence Capstone - EAyMR 2026 (UCA)
+# Python recomendado: 3.11 (econml/dowhy tienen ruedas estables para 3.10-3.12).
+# Día 1 (QA): instalar, verificar `pytest -q` y congelar versiones exactas con:
+#   pip freeze > requirements.lock   (o migrar a `uv lock`)
+
+# --- Núcleo numérico y datos
+numpy>=1.26,<2.1
+pandas>=2.1
+pyarrow>=14.0
+openpyxl>=3.1          # lectura de .xlsx (dataset Kaggle E-Commerce Churn)
+scipy>=1.11
+
+# --- Inferencia clásica y econometría (Fases 1-2)
+statsmodels>=0.14
+pingouin>=0.5.4        # Welch ANOVA, Games-Howell, tamaños de efecto
+missingno>=0.5.2       # patrones de faltantes
+
+# --- Machine Learning (Fase 3)
+scikit-learn>=1.3,<1.6
+
+# --- Inferencia causal y Causal ML (Fase 4)
+dowhy>=0.11
+econml>=0.15
+networkx>=3.1
+graphviz>=0.20         # render DOT (requiere binario graphviz en el sistema para algunos usos)
+
+# --- Visualización
+matplotlib>=3.8
+seaborn>=0.13
+plotly>=5.18
+
+# --- App y serialización (Fase 5)
+streamlit>=1.32
+joblib>=1.3
+
+# --- Notebook
+jupyterlab>=4.0
+ipykernel>=6.25
+nbconvert>=7.0
+
+# --- Quality Gate
+pytest>=8.0
+pytest-cov>=4.1
+ruff>=0.4
