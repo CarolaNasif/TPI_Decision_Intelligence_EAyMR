@@ -14,7 +14,7 @@
 ---
 
 ## Entrada 1 — Marco Estratégico e Hipótesis
-**Responsable:** Project Lead · **Estado:** 🟡 BORRADOR v0.1 (2026-11-12 17:30) — se cierra tras la elección del dataset (12/11 21:00)
+**Responsable:** Project Lead · **Estado:** 🟢 CERRADA v1.0 (2026-11-12 21:00)
 
 ### 1.1 Problema de negocio
 Las plataformas de e-commerce asignan cupones, cashback y recomendaciones personalizadas (generadas por un motor de recomendación / CRM) con el objetivo de retener clientes. Los dashboards muestran que **los clientes que usan incentivos churnean menos**, y la dirección concluye que "los cupones retienen". Pero esa correlación está contaminada por **autoselección**: los usuarios recurrentes, antiguos y comprometidos son, a la vez, los que más usan incentivos y los que menos abandonan. Si la empresa escala la política sobre esa correlación, puede estar **regalando margen a clientes que se iban a quedar igual** ("sure things") y no alcanzando a los "persuadibles".
@@ -48,8 +48,8 @@ flowchart LR
 ### 1.5 Selección fundamentada del dataset
 - Candidatos evaluados: **A** E-Commerce Customer Churn (Kaggle, N=5.630, 18 explicativas) · **B** Olist (≈96k clientes, 9 tablas) · **C** Lenta Uplift (687k, RCT). Detalle y matriz ponderada en [`docs/01_propuestas_datasets_y_dags.md`](docs/01_propuestas_datasets_y_dags.md).
 - **Propuesta del PL:** Opción A (puntaje 4,50/5) por tener T, Y, Z, M y C **observables** en una sola tabla, 7 columnas con faltantes reales y viabilidad en 72 hs.
-- **Decisión del equipo:** ☐ A ☐ B ☐ C — fecha/hora: ________ — votos: ____
-- Procedencia, licencia y hash SHA-256 del archivo crudo: ________
+- **Decisión del equipo:** ☑ A ☐ B ☐ C — fecha/hora: 2026-11-12 21:00 — votos: 3/3 (unánime: Carola Nasif, Julián Agustín Lozano, Emilia Mortarini)
+- Procedencia, licencia y hash SHA-256 del archivo crudo: Kaggle (`ankitverma2010/ecommerce-customer-churn-analysis-and-prediction`, archivo `E Commerce Dataset.xlsx`, hoja `E Comm`) · licencia pública de dataset Kaggle (uso académico/no comercial) · SHA-256: `db70f1e34bc5326887ea3fb3d2a0854e82c577d55ef3a76fdfb25328631bd44d`
 - Amenaza reconocida desde el día 0: procedencia corporativa anónima y corte transversal (orden temporal de T, M, C e Y asumido, no observado).
 
 ### 1.6 Criterios de éxito
@@ -58,15 +58,15 @@ Notebook "Restart & Run All" sin errores · ATE con IC 95% y 3 refutaciones en v
 ---
 
 ## Entrada 2 — Matriz de Decisiones Estadísticas y Supuestos
-**Responsable:** QA + Project Lead · **Estado:** ⬜ pendiente (viernes 13/11)
+**Responsable:** QA + Project Lead · **Estado:** 🟡 Fase 1 completa (Carola Nasif · pendiente Fase 2 por QA y Fase 4 por ML)
 
 | # | Fase | Supuesto / decisión | Test / evidencia | Resultado (estadístico, p) | Violación | Remediación elegida | Alternativa descartada y por qué |
 |---|---|---|---|---|---|---|---|
-| 1 | F1 | α a priori | — | α = 0,05 | — | — | — |
-| 2 | F1 | Mecanismo de NA en `<var>` | Little / logit indicador NA | | | | |
-| 3 | F1 | Normalidad por grupo (ANOVA) | asimetría, curtosis, Q-Q (Shapiro solo informativo) | | | | |
-| 4 | F1 | Homocedasticidad | Levene (center=median) | | | Welch vs Kruskal | |
-| 5 | F1 | Control FWER post-hoc | Tukey / Games-Howell / Bonferroni | | | | |
+| 1 | F1 | α a priori | — | α = 0,05 | — | Fijado antes del análisis; se reporta p exacto y magnitud | α = 0,01 (reduciría potencia innecesariamente) |
+| 2 | F1 | Mecanismo de NA en las 7 columnas con faltantes (4,14%–5,68% en N=5.073) | Test de Little (EM) + logit indicador NA + χ² vs Churn | Little d²=4860,78 (gl=77, p<1e-300); logit MAR AUC=0,911–0,996 (p_LRT<1e-90); χ² vs Churn p≤0,031 en 6/7 (DaySinceLastOrder p=0,391) | Sí (no es MCAR) | Imputación por mediana/moda + indicador binario de NA dentro del Pipeline (fit solo en Train); T=`coupon_any` preserva NA | Eliminación por lista (sesgo bajo MAR) o imputación previa al split (leakage) |
+| 3 | F1 | Normalidad por grupo (ANOVA `CashbackAmount ~ PreferedOrderCat`) | asimetría, curtosis, Q-Q (Shapiro solo informativo) | Fashion (skew 0,08; kurt -0,35; Shapiro p=1,79e-6) y Others (-0,10; -1,45; p=7,03e-11) simétricos; Laptop (-0,92; 8,51), Mobile (-0,66; 4,70) y Grocery (-3,56; 28,73) con colas/curtosis | Sí (Grocery, Laptop y Mobile exceden \|kurt\|≤2; Shapiro rechaza en los 5 por N grande) | Decisión por asimetría/curtosis + Q-Q; Kruskal-Wallis (H=3698,33, p<1e-300, ε²=0,729) como no paramétrico y Welch ANOVA como robusto de medias | Decidir por Shapiro-Wilk (hipersensible con N=5.073) o usar solo ANOVA clásico |
+| 4 | F1 | Homocedasticidad (`CashbackAmount ~ PreferedOrderCat`) | Levene (center=median) + ratio var_max/var_min | Levene=36,61 (p=3,25e-30); ratio var_max/var_min=4,82 | Sí (heterocedasticidad) | Welch ANOVA (F=9492,58, gl1=4, gl2=1063,20, p<1e-300) y Kruskal-Wallis (H=3698,33, p<1e-300, η²=0,841, ω²=0,841); se rechaza H0 | ANOVA clásico de Fisher sin ajuste (asume varianzas iguales; queda solo como referencia) |
+| 5 | F1 | Control FWER post-hoc (k=5 grupos, m=10 pares, FWER sin ajuste=40,13%) | Tukey HSD / Games-Howell / Bonferroni | 10/10 pares rechazan H0 en Games-Howell (p_adj≤1,44e-13), Tukey HSD (p_adj=4,16e-12) y Bonferroni (p_adj≤2,25e-66) | No (controlado) | Games-Howell (heterocedástico) + Bonferroni (no paramétrico) y Tukey HSD como contraste | 10 comparaciones sin corrección (inflaría FWER a 40,13%) |
 | 6 | F2 | Homocedasticidad MCO | Breusch-Pagan / White | | | HC3 | |
 | 7 | F2 | Normalidad residuos | Jarque-Bera + Q-Q | | | | |
 | 8 | F2 | Independencia | Durbin-Watson (aclarar orden de filas) | | | | |
@@ -75,6 +75,10 @@ Notebook "Restart & Run All" sin errores · ATE con IC 95% y 3 refutaciones en v
 | 11 | F2 | PCA: nº de componentes | Kaiser vs codo vs 80% | | | | |
 | 12 | F4 | Positividad / overlap | histograma de propensity, trimming | | | | |
 | 13 | F4 | Balance post-IPW | SMD < 0,1 | | | | |
+
+### 2.1 Resumen de contrastes formales y potencia (Fase 1, `make_clean_dataset()`, N = 5.073; consistentes en Train N = 4.058)
+- **Contraste 1 (`CashbackAmount` según `Churn`):** `Churn=1` (n=841, media \$161,78, DE 39,02) vs `Churn=0` (n=4.232, media \$180,80, DE 50,62). Diferencia = −\$19,02 (IC 95% analítico [−22,07; −15,97], bootstrap 5.000 réplicas [−22,01; −16,03]). Welch $t = -12,24$ ($\text{gl}=1463,28$, $p = 7,35 \times 10^{-33}$), Mann-Whitney $U = 1.344.932,5$ ($p = 3,92 \times 10^{-29}$), Cohen's $d = -0,3891$ (efecto pequeño). Se rechaza $H_0$. **Potencia (`TTestIndPower`):** $1-\beta = 1,0000$; tamaño de efecto mínimo detectable al 80% de potencia: $d_{\min} = 0,1058$. *(En Train N=4.058: diff = −\$18,94, $t = -10,66$, $p = 2,18 \times 10^{-25}$, $d = -0,3833$, potencia = 1,0000).*
+- **Contraste 2 (`Complain` vs `Churn`):** tasa de churn con reclamo = 31,31% (449/1.434) vs sin reclamo = 10,77% (392/3.639); diferencia = +20,54 pp (IC 95% [+17,94 pp; +23,14 pp]), $\chi^2 = 313,77$ ($\text{gl}=1$, $p = 3,30 \times 10^{-70}$), $V$ de Cramér $= 0,2487$, OR $= 3,78$. Se rechaza $H_0$. *(En Train N=4.058: diff = +21,19 pp, $\chi^2 = 265,67$, $p = 9,98 \times 10^{-60}$, $V = 0,2559$).*
 
 ---
 
@@ -191,5 +195,19 @@ Notebook "Restart & Run All" sin errores · ATE con IC 95% y 3 refutaciones en v
 - **Qué se rechazó:** imputar o binarizar `CouponUsed` con NA = 0 (supone sin evidencia que el faltante significa "no usó cupón").
 - **Test asociado:** `tests/test_preprocessing.py` (categorías normalizadas, duplicados eliminados, NA de T preservados, dataset sin imputar, split 80/20 estratificado y disjunto, round-trip del split, preprocesador ajustado solo en Train, categorías nuevas en Test).
 
-#### Sesión IA-04 · _fecha_ · _tema_
+#### Sesión IA-04 · 2026-11-14 15:32 · Fase 1: auditoría de faltantes, contrastes formales, potencia y ANOVA
+- **Herramienta:** Google Antigravity (agente de IA con acceso al workspace).
+- **Operador:** Carola Nasif (Project Lead & Scrum Master).
+- **Prompt (resumen fiel):** "Revisión cruzada de PR #1 y #2 sin mergear; cerrar Entrada 1 de BITACORA.md con decisión A y SHA-256; crear milestones e issues por integrante en GitHub; en rama feat/fase1-inferencia (desde feat/preprocesamiento) implementar solo missingness_report en src/preprocessing.py y las 6 funciones de Fase 1 en src/inference.py (sin tocar Fase 2), con tests en tests/test_inference.py y Entrada 2 F1 en la bitácora."
+- **Qué se hizo:**
+  - `src/preprocessing.py`: `missingness_report` con conteo/% de NA, $\chi^2$ y $V$ de Cramér vs `Churn`, regresión logística del indicador de NA sobre covariables observadas (LRT en `statsmodels` + ROC-AUC en CV estratificada 5-fold) y test global MCAR de Little por algoritmo EM.
+  - `src/inference.py`: `cohens_d`, `two_sample_test` (Welch t, IC analítico y bootstrap 5.000 réplicas, Mann-Whitney U, Cohen's d, potencia y MDE con `TTestIndPower`), `chi2_independence` ($\chi^2$, $V$ de Cramér, diferencia de proporciones con IC 95%), `normality_diagnostics` (asimetría, curtosis en exceso, Shapiro/D'Agostino informativos y Q-Q), `one_way_anova_suite` (Levene `center='median'`, ANOVA clásico, Welch ANOVA, Kruskal-Wallis, $\eta^2$, $\omega^2$, $\varepsilon^2$ y árbol de decisión) y `posthoc` (`games-howell`, `tukey`, `bonferroni`).
+  - `BITACORA.md`: Entrada 1 cerrada (v1.0, Opción A unánime 3/3, SHA-256 `db70f1e34bc5326887ea3fb3d2a0854e82c577d55ef3a76fdfb25328631bd44d`) y Entrada 2 filas F1 completadas con los resultados reales sobre `make_clean_dataset()`.
+- **Errores / incompatibilidades detectadas y corregidas:**
+  1. `pingouin 0.6.1` renombró columnas respecto a 0.5.x (`p_unc` en lugar de `p-unc` en `welch_anova`; `p_tukey` en lugar de `p-tukey` y `mean_A`/`mean_B` en lugar de `mean(A)`/`mean(B)` en `pairwise_tukey`/`pairwise_gameshowell`). Se agregó `_pick_col` para compatibilidad con ambas versiones.
+  2. La separación casi completa de algunos indicadores de NA producía warnings de convergencia/Hessiano en `statsmodels.Logit`; se aislaron dentro de `warnings.catch_warnings()` usando BFGS primero y respaldando la evidencia MAR con ROC-AUC out-of-fold.
+- **Qué se aceptó / qué se rechazó:** Se aceptaron los cálculos exactos en `src/` sin duplicar lógica ni tocar las funciones asignadas a Emilia (Fase 2). Se rechazó cualquier redacción que dijera "se acepta H0", usando estrictamente "Se rechaza H0" / "No se rechaza H0".
+- **Test asociado:** `tests/test_inference.py` (tests unitarios con datos sintéticos + verificación de fronteras de rol + integración sobre `make_clean_dataset()`).
+
+#### Sesión IA-05 · _fecha_ · _tema_
 - Herramienta / modelo · Operador · Prompt · Qué se aceptó · Qué se rechazó y por qué · Test asociado.

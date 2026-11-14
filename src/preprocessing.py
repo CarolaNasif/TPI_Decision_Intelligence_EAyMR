@@ -24,9 +24,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import warnings
 from pathlib import Path
+from typing import Any
 
+import numpy as np
 import pandas as pd
+from scipy import stats
 
 from src import RANDOM_STATE
 
@@ -181,14 +185,255 @@ def cleaning_summary(path: str | Path = RAW_PATH) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=["métrica", "antes", "después"]).set_index("métrica")
 
 
-def missingness_report(df):
+def _little_mcar_test(df_num: pd.DataFrame, alpha: float = 0.05) -> dict[str, Any]:
+    """Test global MCAR de Little (1988) bajo normalidad multivariada (EM)."""
+    clean = df_num.dropna(axis=1, how="all").copy()
+    valid_cols = [c for c in clean.columns if clean[c].std(ddof=1) > 0]
+    clean = clean[valid_cols]
+    n_rows, p = clean.shape
+    if p < 2 or int(clean.isna().sum().sum()) == 0:
+        return {
+            "stat": 0.0,
+            "df": 0,
+            "p_value": 1.0,
+            "n_patterns": 1,
+            "decision": "Sin faltantes suficientes para test de Little",
+        }
+
+    arr = clean.to_numpy(dtype=float)
+    mu = np.nanmean(arr, axis=0)
+    sigma = clean.cov().fillna(0.0).to_numpy(dtype=float)
+    sigma = 0.5 * (sigma + sigma.T) + 1e-6 * np.eye(p)
+
+    masks = np.isnan(arr)
+    unique_patterns, inverse = np.unique(masks, axis=0, return_inverse=True)
+    pattern_indices = [np.flatnonzero(inverse == g) for g in range(len(unique_patterns))]
+
+    for _ in range(60):
+        sum_x = np.zeros(p, dtype=float)
+        sum_xx = np.zeros((p, p), dtype=float)
+        for pat, idx in zip(unique_patterns, pattern_indices, strict=True):
+            obs = np.flatnonzero(~pat)
+            mis = np.flatnonzero(pat)
+            rows = arr[idx]
+            n_g = len(idx)
+            if len(obs) == 0:
+                sum_x += n_g * mu
+                sum_xx += n_g * (sigma + np.outer(mu, mu))
+                continue
+            if len(mis) == 0:
+                sum_x += rows.sum(axis=0)
+                sum_xx += rows.T @ rows
+                continue
+
+            s_oo = sigma[np.ix_(obs, obs)] + 1e-8 * np.eye(len(obs))
+            s_mo = sigma[np.ix_(mis, obs)]
+            s_mm = sigma[np.ix_(mis, mis)]
+            beta = s_mo @ np.linalg.inv(s_oo)
+
+            filled = rows.copy()
+            filled[:, mis] = mu[mis] + (rows[:, obs] - mu[obs]) @ beta.T
+            sum_x += filled.sum(axis=0)
+            sum_xx += filled.T @ filled
+            sum_xx[np.ix_(mis, mis)] += n_g * (s_mm - beta @ s_mo.T)
+
+        mu_new = sum_x / n_rows
+        sigma_new = (sum_xx / n_rows) - np.outer(mu_new, mu_new)
+        sigma_new = 0.5 * (sigma_new + sigma_new.T) + 1e-6 * np.eye(p)
+        if np.max(np.abs(mu_new - mu)) < 1e-6:
+            mu, sigma = mu_new, sigma_new
+            break
+        mu, sigma = mu_new, sigma_new
+
+    d2 = 0.0
+    total_obs_dim = 0
+    for pat, idx in zip(unique_patterns, pattern_indices, strict=True):
+        obs = np.flatnonzero(~pat)
+        if len(obs) == 0:
+            continue
+        rows = arr[idx][:, obs]
+        diff_g = rows.mean(axis=0) - mu[obs]
+        s_oo = sigma[np.ix_(obs, obs)] + 1e-8 * np.eye(len(obs))
+        d2 += float(len(idx) * (diff_g @ np.linalg.solve(s_oo, diff_g)))
+        total_obs_dim += len(obs)
+
+    df_little = total_obs_dim - p
+    if df_little <= 0:
+        return {
+            "stat": float(d2),
+            "df": 0,
+            "p_value": float("nan"),
+            "n_patterns": len(unique_patterns),
+            "decision": "Grados de libertad insuficientes para test de Little",
+        }
+    p_val = float(stats.chi2.sf(d2, df_little))
+    decision = (
+        "Se rechaza H0 (no es MCAR)" if p_val < alpha else "No se rechaza H0 (compatible con MCAR)"
+    )
+    return {
+        "stat": float(d2),
+        "df": int(df_little),
+        "p_value": p_val,
+        "n_patterns": len(unique_patterns),
+        "decision": decision,
+    }
+
+
+def _build_mar_design_matrix(df: pd.DataFrame, cov_cols: list[str]) -> pd.DataFrame:
+    """Construye matriz de diseño numérica estandarizada + dummies para logit de NA."""
+    parts: list[pd.DataFrame] = []
+    for c in cov_cols:
+        s = df[c]
+        if pd.api.types.is_numeric_dtype(s) and not pd.api.types.is_bool_dtype(s):
+            vals = s.astype(float)
+            if vals.isna().any():
+                vals = vals.fillna(vals.median())
+            std = float(vals.std(ddof=0))
+            if std > 1e-12:
+                parts.append(pd.DataFrame({c: (vals - float(vals.mean())) / std}, index=df.index))
+        else:
+            vals = s.astype("object")
+            if vals.isna().any():
+                mode = vals.dropna().mode()
+                vals = vals.fillna(mode.iloc[0] if len(mode) else "MISSING")
+            dummies = pd.get_dummies(vals.astype(str), prefix=c, drop_first=True, dtype=float)
+            if dummies.shape[1] > 0:
+                parts.append(dummies)
+    if not parts:
+        return pd.DataFrame(index=df.index)
+    X_mat = pd.concat(parts, axis=1)
+    keep = [col for col in X_mat.columns if float(X_mat[col].std(ddof=0)) > 1e-12]
+    return X_mat[keep]
+
+
+def missingness_report(
+    df: pd.DataFrame, target: str = TARGET_COL, alpha: float = 0.05
+) -> pd.DataFrame:
     """Tabla de % de faltantes por columna + insumos para clasificar MCAR/MAR/MNAR.
 
-    Responsable: Project Lead (Fase 1).
-    TODO: % NA, patrón conjunto (missingno), test de Little (MCAR) y regresiones
-    logísticas del indicador de NA sobre las demás variables (evidencia MAR).
+    Incluye:
+        - Conteo y % de NA por columna (excluyendo IDs).
+        - Asociación chi-cuadrado y V de Cramér del indicador de NA contra `target`.
+        - Regresión logística del indicador de NA sobre covariables observadas
+          (p-valor LRT en statsmodels + ROC-AUC en CV estratificada como evidencia MAR).
+        - Test global MCAR de Little sobre variables numéricas (guardado en `attrs["little_mcar"]`).
     """
-    raise NotImplementedError
+    import statsmodels.api as sm
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import roc_auc_score
+    from sklearn.model_selection import StratifiedKFold, cross_val_predict
+
+    excluded_from_little = {*ID_COLS, target, TREATMENT_COL}
+    num_cols = [
+        c
+        for c in df.select_dtypes(include="number").columns
+        if c not in excluded_from_little and not pd.api.types.is_bool_dtype(df[c])
+    ]
+    little = _little_mcar_test(df[num_cols], alpha=alpha) if num_cols else {
+        "stat": float("nan"),
+        "df": 0,
+        "p_value": float("nan"),
+        "n_patterns": 0,
+        "decision": "Sin variables numéricas",
+    }
+
+    inspect_cols = [c for c in df.columns if c not in ID_COLS]
+    rows: list[dict[str, Any]] = []
+
+    for col in inspect_cols:
+        is_na = df[col].isna().astype(int)
+        n_miss = int(is_na.sum())
+        pct_miss = float(is_na.mean() * 100.0)
+
+        chi2_tgt = float("nan")
+        p_chi2_tgt = float("nan")
+        v_tgt = float("nan")
+        mar_p_lrt = float("nan")
+        mar_auc = float("nan")
+
+        if 0 < n_miss < len(df):
+            if target in df.columns and col != target:
+                valid = df[[col, target]].dropna(subset=[target])
+                ct = pd.crosstab(valid[col].isna().astype(int), valid[target])
+                if ct.shape == (2, 2):
+                    chi2_val, p_val, _, _ = stats.chi2_contingency(ct, correction=False)
+                    chi2_tgt = float(chi2_val)
+                    p_chi2_tgt = float(p_val)
+                    v_tgt = float(np.sqrt(chi2_val / len(valid)))
+
+            paired_treatment = {TREATMENT_SOURCE_COL, TREATMENT_COL}
+            exclude_covs = {*ID_COLS, target, col}
+            if col in paired_treatment:
+                exclude_covs |= paired_treatment
+
+            cand_covs = [c for c in df.columns if c not in exclude_covs]
+            obs_covs = [c for c in cand_covs if int(df[c].isna().sum()) == 0]
+            cov_cols = obs_covs if obs_covs else [c for c in cand_covs if df[c].notna().any()]
+
+            X_mar = _build_mar_design_matrix(df, cov_cols)
+            if X_mar.shape[1] > 0:
+                X_sm = sm.add_constant(X_mar, has_constant="add")
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    for method in ("bfgs", "newton"):
+                        try:
+                            res = sm.Logit(is_na, X_sm).fit(disp=False, method=method, maxiter=500)
+                            if np.isfinite(res.llr_pvalue):
+                                mar_p_lrt = float(res.llr_pvalue)
+                                break
+                        except Exception:  # noqa: BLE001
+                            continue
+
+                clf = LogisticRegression(random_state=RANDOM_STATE, max_iter=1000)
+                min_count = int(min(n_miss, len(df) - n_miss))
+                if min_count >= 5:
+                    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
+                    probs = cross_val_predict(clf, X_mar, is_na, cv=cv, method="predict_proba")[:, 1]
+                else:
+                    clf.fit(X_mar, is_na)
+                    probs = clf.predict_proba(X_mar)[:, 1]
+                mar_auc = float(roc_auc_score(is_na, probs))
+
+            is_mar = (
+                (pd.notna(mar_p_lrt) and mar_p_lrt < alpha)
+                or (pd.notna(mar_auc) and mar_auc >= 0.60)
+                or (pd.notna(p_chi2_tgt) and p_chi2_tgt < alpha)
+            )
+            mechanism = "MAR (posible componente MNAR por dominio)" if is_mar else "MCAR compatible"
+            remediation = (
+                "Imputación por mediana/moda + indicador binario de NA "
+                "dentro del Pipeline (fit solo en Train)"
+            )
+        elif n_miss == len(df):
+            mechanism = "100% faltante"
+            remediation = "Descartar columna"
+        else:
+            mechanism = "Completo (0% NA)"
+            remediation = "No requiere imputación"
+
+        rows.append(
+            {
+                "column": col,
+                "n_missing": n_miss,
+                "pct_missing": pct_miss,
+                "chi2_target": chi2_tgt,
+                "p_chi2_target": p_chi2_tgt,
+                "cramers_v_target": v_tgt,
+                "mar_logit_p_lrt": mar_p_lrt,
+                "mar_logit_auc": mar_auc,
+                "mechanism": mechanism,
+                "remediation": remediation,
+                "little_mcar_stat": little["stat"],
+                "little_mcar_p": little["p_value"],
+            }
+        )
+
+    report = pd.DataFrame(rows).sort_values(
+        by=["pct_missing", "column"], ascending=[False, True], kind="mergesort"
+    )
+    report = report.reset_index(drop=True)
+    report.attrs["little_mcar"] = little
+    return report
 
 
 # --------------------------------------------------------------------------- split
