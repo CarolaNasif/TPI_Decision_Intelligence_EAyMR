@@ -1,0 +1,373 @@
+{
+  "best_model": "Random Forest",
+  "best_model_file": "best_model.joblib",
+  "calibration": "isotonic (CalibratedClassifierCV, 5-fold en Train)",
+  "selection_metric": "ROC-AUC media en StratifiedKFold(5) sobre Train",
+  "threshold": 0.5,
+  "features": {
+    "numeric": [
+      "Tenure",
+      "WarehouseToHome",
+      "HourSpendOnApp",
+      "NumberOfDeviceRegistered",
+      "SatisfactionScore",
+      "NumberOfAddress",
+      "Complain",
+      "OrderAmountHikeFromlastYear",
+      "CouponUsed",
+      "OrderCount",
+      "DaySinceLastOrder",
+      "CashbackAmount"
+    ],
+    "categorical": [
+      "PreferredLoginDevice",
+      "CityTier",
+      "PreferredPaymentMode",
+      "Gender",
+      "PreferedOrderCat",
+      "MaritalStatus"
+    ]
+  },
+  "categories": {
+    "PreferredLoginDevice": [
+      "Computer",
+      "Mobile Phone"
+    ],
+    "CityTier": [
+      "1",
+      "2",
+      "3"
+    ],
+    "PreferredPaymentMode": [
+      "Cash on Delivery",
+      "Credit Card",
+      "Debit Card",
+      "E wallet",
+      "UPI"
+    ],
+    "Gender": [
+      "Female",
+      "Male"
+    ],
+    "PreferedOrderCat": [
+      "Fashion",
+      "Grocery",
+      "Laptop & Accessory",
+      "Mobile Phone",
+      "Others"
+    ],
+    "MaritalStatus": [
+      "Divorced",
+      "Married",
+      "Single"
+    ]
+  },
+  "cv": {
+    "Logística ElasticNet": {
+      "best_params": {
+        "C": 100.0,
+        "l1_ratio": 0.0
+      },
+      "cv_roc_auc_mean": 0.8935287577970982,
+      "cv_roc_auc_std": 0.006131531663940739,
+      "cv_pr_auc_mean": 0.7273430960475497,
+      "cv_pr_auc_std": 0.04097877197054381,
+      "cv_neg_brier_mean": -0.08344352325604112,
+      "cv_neg_brier_std": 0.005632871731630126,
+      "train_roc_auc_mean": 0.9050531612277567
+    },
+    "Naive Bayes": {
+      "best_params": {
+        "var_smoothing": 0.001
+      },
+      "cv_roc_auc_mean": 0.7857152805724239,
+      "cv_roc_auc_std": 0.01938143067264395,
+      "cv_pr_auc_mean": 0.4424754993589247,
+      "cv_pr_auc_std": 0.031062446501868953,
+      "cv_neg_brier_mean": -0.31040894108988737,
+      "cv_neg_brier_std": 0.03131656155558538,
+      "train_roc_auc_mean": 0.7971344490808953
+    },
+    "CART podado": {
+      "best_params": {
+        "ccp_alpha": 0.0019026779902938408
+      },
+      "cv_roc_auc_mean": 0.8476770388049945,
+      "cv_roc_auc_std": 0.02218053632004831,
+      "cv_pr_auc_mean": 0.6074733968495332,
+      "cv_pr_auc_std": 0.04485693442182892,
+      "cv_neg_brier_mean": -0.09468072829682816,
+      "cv_neg_brier_std": 0.007131597034693414,
+      "train_roc_auc_mean": 0.8824641691869861
+    },
+    "Random Forest": {
+      "best_params": {
+        "n_estimators": 200,
+        "min_samples_split": 2,
+        "min_samples_leaf": 1,
+        "max_features": "sqrt",
+        "max_depth": 15
+      },
+      "cv_roc_auc_mean": 0.9320278483240717,
+      "cv_roc_auc_std": 0.014655267439913145,
+      "cv_pr_auc_mean": 0.8083703532203366,
+      "cv_pr_auc_std": 0.03483526100099157,
+      "cv_neg_brier_mean": -0.07433394594535155,
+      "cv_neg_brier_std": 0.005344003875852904,
+      "train_roc_auc_mean": 1.0
+    }
+  },
+  "test": [
+    {
+      "modelo": "CART sin podar",
+      "accuracy": 0.8643,
+      "precision": 0.5873,
+      "recall": 0.7184,
+      "f1": 0.6463,
+      "f1_macro": 0.7812,
+      "f1_ponderado": 0.8695,
+      "roc_auc": 0.8066,
+      "roc_auc_ic95_inf": 0.7602,
+      "roc_auc_ic95_sup": 0.8488,
+      "pr_auc": 0.4705,
+      "brier": 0.1357,
+      "log_loss": 4.8903,
+      "ece": 0.0385
+    },
+    {
+      "modelo": "Logística ElasticNet",
+      "accuracy": 0.8744,
+      "precision": 0.6842,
+      "recall": 0.5049,
+      "f1": 0.581,
+      "f1_macro": 0.7536,
+      "f1_ponderado": 0.8666,
+      "roc_auc": 0.887,
+      "roc_auc_ic95_inf": 0.8519,
+      "roc_auc_ic95_sup": 0.9207,
+      "pr_auc": 0.6817,
+      "brier": 0.0895,
+      "log_loss": 0.2931,
+      "ece": 0.0225
+    },
+    {
+      "modelo": "Naive Bayes",
+      "accuracy": 0.5913,
+      "precision": 0.2689,
+      "recall": 0.7961,
+      "f1": 0.402,
+      "f1_macro": 0.5458,
+      "f1_ponderado": 0.6399,
+      "roc_auc": 0.7544,
+      "roc_auc_ic95_inf": 0.6985,
+      "roc_auc_ic95_sup": 0.8051,
+      "pr_auc": 0.4427,
+      "brier": 0.3223,
+      "log_loss": 1.8466,
+      "ece": 0.365
+    },
+    {
+      "modelo": "CART podado",
+      "accuracy": 0.8593,
+      "precision": 0.6118,
+      "recall": 0.5049,
+      "f1": 0.5532,
+      "f1_macro": 0.7348,
+      "f1_ponderado": 0.8538,
+      "roc_auc": 0.8355,
+      "roc_auc_ic95_inf": 0.7933,
+      "roc_auc_ic95_sup": 0.8792,
+      "pr_auc": 0.5079,
+      "brier": 0.107,
+      "log_loss": 0.3515,
+      "ece": 0.0485
+    },
+    {
+      "modelo": "Random Forest",
+      "accuracy": 0.9095,
+      "precision": 0.8551,
+      "recall": 0.5728,
+      "f1": 0.686,
+      "f1_macro": 0.8166,
+      "f1_ponderado": 0.9021,
+      "roc_auc": 0.9434,
+      "roc_auc_ic95_inf": 0.9163,
+      "roc_auc_ic95_sup": 0.9677,
+      "pr_auc": 0.8194,
+      "brier": 0.0716,
+      "log_loss": 0.2491,
+      "ece": 0.079
+    },
+    {
+      "modelo": "Random Forest + isotónica",
+      "accuracy": 0.9062,
+      "precision": 0.7831,
+      "recall": 0.6311,
+      "f1": 0.6989,
+      "f1_macro": 0.8217,
+      "f1_ponderado": 0.9021,
+      "roc_auc": 0.9461,
+      "roc_auc_ic95_inf": 0.9218,
+      "roc_auc_ic95_sup": 0.9676,
+      "pr_auc": 0.8062,
+      "brier": 0.0643,
+      "log_loss": 0.2697,
+      "ece": 0.0179
+    }
+  ],
+  "cart": {
+    "unpruned_train_roc_auc": 1.0,
+    "ccp_alpha_best": 0.0019026779902938408,
+    "ccp_alpha_1se": 0.003020347595824471
+  },
+  "rf_oob": {
+    "oob_accuracy": 0.909433962264151,
+    "oob_roc_auc": 0.9410524583883817
+  },
+  "global_importance": [
+    {
+      "feature": "Tenure",
+      "perm_mean": 0.20244,
+      "perm_std": 0.01422,
+      "mdi": 0.20784,
+      "rank_mdi": 1,
+      "rank_perm": 1
+    },
+    {
+      "feature": "Complain",
+      "perm_mean": 0.03646,
+      "perm_std": 0.00683,
+      "mdi": 0.06968,
+      "rank_mdi": 3,
+      "rank_perm": 2
+    },
+    {
+      "feature": "PreferedOrderCat",
+      "perm_mean": 0.02514,
+      "perm_std": 0.00533,
+      "mdi": 0.04448,
+      "rank_mdi": 10,
+      "rank_perm": 3
+    },
+    {
+      "feature": "DaySinceLastOrder",
+      "perm_mean": 0.01697,
+      "perm_std": 0.00371,
+      "mdi": 0.054,
+      "rank_mdi": 7,
+      "rank_perm": 4
+    },
+    {
+      "feature": "CityTier",
+      "perm_mean": 0.01559,
+      "perm_std": 0.00301,
+      "mdi": 0.03342,
+      "rank_mdi": 14,
+      "rank_perm": 5
+    },
+    {
+      "feature": "SatisfactionScore",
+      "perm_mean": 0.0154,
+      "perm_std": 0.00175,
+      "mdi": 0.04305,
+      "rank_mdi": 11,
+      "rank_perm": 6
+    },
+    {
+      "feature": "MaritalStatus",
+      "perm_mean": 0.01396,
+      "perm_std": 0.00502,
+      "mdi": 0.05233,
+      "rank_mdi": 9,
+      "rank_perm": 7
+    },
+    {
+      "feature": "NumberOfAddress",
+      "perm_mean": 0.01315,
+      "perm_std": 0.0041,
+      "mdi": 0.0591,
+      "rank_mdi": 5,
+      "rank_perm": 8
+    },
+    {
+      "feature": "PreferredLoginDevice",
+      "perm_mean": 0.00936,
+      "perm_std": 0.00216,
+      "mdi": 0.02426,
+      "rank_mdi": 16,
+      "rank_perm": 9
+    },
+    {
+      "feature": "WarehouseToHome",
+      "perm_mean": 0.00924,
+      "perm_std": 0.00286,
+      "mdi": 0.06886,
+      "rank_mdi": 4,
+      "rank_perm": 10
+    },
+    {
+      "feature": "PreferredPaymentMode",
+      "perm_mean": 0.00893,
+      "perm_std": 0.0025,
+      "mdi": 0.05641,
+      "rank_mdi": 6,
+      "rank_perm": 11
+    },
+    {
+      "feature": "NumberOfDeviceRegistered",
+      "perm_mean": 0.00603,
+      "perm_std": 0.00143,
+      "mdi": 0.03567,
+      "rank_mdi": 12,
+      "rank_perm": 12
+    },
+    {
+      "feature": "OrderCount",
+      "perm_mean": 0.00551,
+      "perm_std": 0.00153,
+      "mdi": 0.03398,
+      "rank_mdi": 13,
+      "rank_perm": 13
+    },
+    {
+      "feature": "Gender",
+      "perm_mean": 0.00497,
+      "perm_std": 0.00164,
+      "mdi": 0.02369,
+      "rank_mdi": 17,
+      "rank_perm": 14
+    },
+    {
+      "feature": "OrderAmountHikeFromlastYear",
+      "perm_mean": 0.00205,
+      "perm_std": 0.00212,
+      "mdi": 0.05321,
+      "rank_mdi": 8,
+      "rank_perm": 15
+    },
+    {
+      "feature": "CouponUsed",
+      "perm_mean": 0.00032,
+      "perm_std": 0.00181,
+      "mdi": 0.03306,
+      "rank_mdi": 15,
+      "rank_perm": 16
+    },
+    {
+      "feature": "HourSpendOnApp",
+      "perm_mean": -0.0003,
+      "perm_std": 0.00124,
+      "mdi": 0.02124,
+      "rank_mdi": 18,
+      "rank_perm": 17
+    },
+    {
+      "feature": "CashbackAmount",
+      "perm_mean": -0.00099,
+      "perm_std": 0.00223,
+      "mdi": 0.0857,
+      "rank_mdi": 2,
+      "rank_perm": 18
+    }
+  ]
+}

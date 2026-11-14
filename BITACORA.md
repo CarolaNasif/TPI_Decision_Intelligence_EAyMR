@@ -79,7 +79,7 @@ Notebook "Restart & Run All" sin errores · ATE con IC 95% y 3 refutaciones en v
 ---
 
 ## Entrada 3 — Autopsia de Experimentos Fallidos (Data Autopsy)
-**Responsable:** Backend & ML + QA · **Estado:** 🟡 en curso (1/2) · **Mínimo: 2 experimentos**
+**Responsable:** Backend & ML + QA · **Estado:** 🟢 3 experimentos registrados (mínimo 2) · pendiente revisión QA
 
 ### Experimento fallido #1 — Torneo predictivo "demasiado bueno": copias casi duplicadas del dataset
 `[2026-11-14 16:22] · Julián Agustín Lozano (Backend & ML)`
@@ -90,8 +90,19 @@ Notebook "Restart & Run All" sin errores · ATE con IC 95% y 3 refutaciones en v
 - **Qué aprendimos:** un desempeño excepcional es un síntoma a auditar, no un logro. Los duplicados exactos no agotan el problema: hay que buscar **casi duplicados** con una métrica de coincidencia por columnas.
 - **Corrección aplicada y resultado:** `near_duplicate_copies()` en `src/preprocessing.py` (ID + 1470 y ≥ 14/19 columnas iguales; se conserva el ID más bajo), aplicada antes del split junto con los duplicados exactos restantes (10). **5.630 → 2.982 filas** · churn 16,84% → 17,30% · T tratados 80,73% (133 NA) · Train 2.385 / Test 597. Reversible con `load_raw_data(drop_near_duplicates=False)` para sensibilidad. Tests: `test_near_duplicate_copies_detected`, `test_real_raw_dataset_copy_structure`. La Fase 1 (PR #11) debe re-ejecutarse sobre el dataset corregido.
 
-### Experimento fallido #2 — _título_
-- (misma estructura)
+### Experimento fallido #2 — Naive Bayes: buen orden, probabilidades inservibles
+`[2026-11-14 16:30] · Julián Agustín Lozano (Backend & ML)`
+- **Hipótesis / qué intentamos:** usar GaussianNB (Familia 2) como clasificador probabilístico rápido y comparar su calibración con la logística.
+- **Qué pasó (evidencia numérica):** ROC-AUC en Test 0,754 (ordena razonablemente), pero **Brier 0,322 y ECE 0,365**, frente a 0,090 y 0,023 de la logística. Sobre-predice churn: recall 0,80 con F1 0,40.
+- **Diagnóstico de la causa:** el supuesto de independencia condicional $P(X_1,\dots,X_p\mid Y)=\prod_i P(X_i\mid Y)$ se viola fuerte. Dentro de cada clase, Spearman `CouponUsed`–`OrderCount` = 0,74 (Churn=0) y 0,69 (Churn=1); `OrderCount`–`DaySinceLastOrder` = 0,58. El producto "cuenta varias veces" la misma evidencia y empuja las probabilidades a 0 o 1. Además, la gaussianidad no se cumple en variables de conteo asimétricas.
+- **Qué aprendimos:** un buen AUC no implica probabilidades utilizables. Para decidir a quién darle un cupón importa la calibración (Brier, ECE, reliability diagram), no solo el ranking.
+- **Corrección aplicada y resultado:** NB queda como línea de base y no se elige. El modelo de producción (RF) se recalibra con `CalibratedClassifierCV` isotónica en Train: **ECE 0,079 → 0,018 y Brier 0,072 → 0,064**, con ROC-AUC estable (0,943 → 0,946).
+
+### Experimento fallido #3 — Árbol CART sin restricciones
+`[2026-11-14 16:30] · Julián Agustín Lozano (Backend & ML)`
+- **Qué pasó:** ROC-AUC **1,000 en Train vs 0,807 en Test** (memoriza: una hoja por cliente).
+- **Corrección:** poda por complejidad de costo. Camino de α en Train, α óptimo por CV = 0,0019 (regla 1-SE: 0,0030). El árbol podado mejora en Test (ROC-AUC 0,836, Brier 0,107 vs 0,136), aunque sigue debajo del RF (0,943) y de la logística (0,887).
+- **Nota:** con el dataset *sin* depurar (Experimento #1) el árbol sin podar daba 0,917 en Test, **mejor** que el podado: el sobreajuste quedaba oculto por los gemelos Train/Test.
 
 > Candidatos probables: árbol CART sin podar (AUC Train≈1 vs Test), Naive Bayes descalibrado por dependencia `OrderCount`–`CouponUsed`, logística inestable por VIF alto, ATE "inflado" al incluir el colisionador.
 
