@@ -102,22 +102,61 @@ Notebook "Restart & Run All" sin errores · ATE con IC 95% y 3 refutaciones en v
 ---
 
 ## Entrada 4 — Formalización del Debate Causal
-**Responsable:** Backend & ML / Causal + Project Lead · **Estado:** ⬜ pendiente (sábado 14/11)
+**Responsable:** Backend & ML / Causal + Project Lead · **Estado:** 🟡 4.1–4.3 completados por Project Lead (Carola Nasif, 2026-11-14) · pendiente 4.4 por Backend & ML (Julián Agustín Lozano)
+
+**Contrato estructural del DAG (Opción A confirmada):**
+- **Tratamiento ($T$):** `coupon_any` $= \mathbb{I}(\text{CouponUsed} \ge 1)$ (entero nullable; `133` NA preservados en $N = 2.982$).
+- **Resultado ($Y$):** `Churn` $\in \{0, 1\}$ (abandono en el último mes; retención $= 1 - Y$).
+- **Set de ajuste backdoor ($Z$, 13 confusores pre-tratamiento):** `Tenure`, `Complain`, `SatisfactionScore`, `CityTier`, `PreferedOrderCat`, `HourSpendOnApp`, `PreferredLoginDevice`, `PreferredPaymentMode`, `Gender`, `MaritalStatus`, `WarehouseToHome`, `NumberOfAddress`, `NumberOfDeviceRegistered` (cada uno con flechas $Z_j \to T$ y $Z_j \to Y$).
+- **Mediadores ($M$, excluidos de $Z$):** `OrderCount`, `CashbackAmount` ($T \to M \to Y$).
+- **Colisionador ($C$, excluido de $Z$):** `DaySinceLastOrder` ($T \to C \leftarrow Y$).
+- **Latente no observada ($U$):** $U_{\text{engagement}} \to \{\text{HourSpendOnApp},\, T,\, Y\}$.
 
 ### 4.1 Justificación arco por arco
 | Arco | Mecanismo de dominio | Temporalidad | Confianza (alta/media/baja) |
 |---|---|---|---|
-| `Tenure → T` | | | |
-| `Tenure → Y` | | | |
-| `Complain → T` | | | |
-| `T → OrderCount → Y` | | | |
-| `T → DaySinceLastOrder ← Y` | | | |
+| `Tenure → T` | Clientes con mayor antigüedad conocen mejor los cupones y promociones del CRM, lo que eleva la probabilidad de redención (autoselección de usuarios recurrentes). | Pre-tratamiento genuino (meses desde el alta preceden al uso de cupones del último mes). | Alta |
+| `Tenure → Y` | La antigüedad consolida hábito de compra, confianza y costos de cambio (*switching costs*), reduciendo la tasa de abandono (`Churn`). | Pre-resultado (antigüedad acumulada antecede a la decisión de baja). | Alta |
+| `Complain → T` | Los reclamos disparan la emisión de cupones compensatorios (*recovery/apology coupons*) por parte de atención al cliente y reglas automáticas de retención. | Pre-tratamiento asumido dentro de la ventana mensual (reclamo precede al cupón de recuperación). | Alta |
+| `Complain → Y` | Un reclamo refleja una falla operativa o de calidad que incrementa directamente la propensión al abandono (Fase 1: `32,63%` con reclamo vs `11,11%` sin reclamo; $\Delta = +21{,}52\text{ pp}$, $\text{OR} = 3{,}88$). | Pre-resultado (el incidente ocurre antes de la baja efectiva). | Alta |
+| `SatisfactionScore → T` | Usuarios con menor satisfacción reciben/buscan más incentivos compensatorios o promocionales, mientras que los muy conformes aprovechan beneficios vigentes. | **Discutible (ambigua):** medida en el mismo corte "último mes" que $T$; podría estar afectada por el cupón (sesgo post-tratamiento si $T \to \text{Satisfaction}$). Se incluye en $Z$ base y se evalúa sensibilidad excluyéndola. | Baja / Media |
+| `SatisfactionScore → Y` | Menor satisfacción general anticipa desafección con el servicio y mayor probabilidad de abandono (`Churn`). | Ambigua en corte transversal (incluida en $Z$ por contrato; contrastar sensibilidad). | Media |
+| `HourSpendOnApp → T` | Mayor exposición horaria en la app aumenta la visibilidad de banners, notificaciones push y cupones disponibles. | **Discutible (simultánea):** promedio de horas en el último mes es coetáneo con `CouponUsed` y refleja también la latente $U_{\text{engagement}}$. | Media |
+| `HourSpendOnApp → Y` | Mayor uso activo de la app traduce hábito digital e involucramiento que reducen el riesgo de abandono (`Churn`). | Simultánea dentro del corte mensual; proxy parcial de $U_{\text{engagement}}$. | Media |
+| `CityTier → T` | La segmentación geográfica por tamaño de ciudad condiciona campañas promocionales regionales, intensidad competitiva y alianzas de cupones. | Pre-tratamiento estructural (ubicación del cliente). | Alta |
+| `CityTier → Y` | Los tiempos de envío, cobertura logística y alternativas de competidores varían según el nivel urbano (`CityTier`), afectando la retención. | Pre-resultado estructural. | Alta |
+| `PreferedOrderCat → T` | La categoría preferida segmenta las campañas del motor de recomendaciones y el calendario de descuentos por vertical (Fase 1: `CashbackAmount` varía con $\eta^2 = 0{,}827$). | Pre-tratamiento (preferencia consolidada de compra). | Alta |
+| `PreferedOrderCat → Y` | La frecuencia de recompra y fidelidad natural difieren entre verticales (p. ej. `Grocery` y `Fashion` frente a electrónica como `Mobile Phone` o `Laptop & Accessory`). | Pre-resultado (patrón de consumo por categoría). | Alta |
+| `WarehouseToHome → T` | Distancias mayores al centro de distribución encarecen o demoran la entrega, incentivando cupones promocionales/flete gratis para sostener conversión. | Pre-tratamiento estructural (distancia geográfica). | Media / Alta |
+| `WarehouseToHome → Y` | Mayor distancia logística aumenta fricciones de entrega y riesgo de insatisfacción o abandono. | Pre-resultado estructural. | Media / Alta |
+| `PreferredLoginDevice`, `PreferredPaymentMode` $\to T$ y $\to Y$ | Canal de acceso (`Mobile Phone` vs `Computer`) y medio de pago (`Credit Card`, `Debit Card`, `UPI`, `Cash on Delivery`, `E wallet`) activan promos bancarias/app exclusivas y reflejan fricción de checkout asociada al churn. | Pre-tratamiento estructural / perfil de cuenta. | Media / Alta |
+| `Gender`, `MaritalStatus`, `NumberOfAddress`, `NumberOfDeviceRegistered` $\to T$ y $\to Y$ | Rasgos demográficos y huella del hogar/dispositivos que capturan estabilidad del perfil, uso familiar compartido y adopción multidispositivo ligados tanto al uso de beneficios como a la permanencia. | Pre-tratamiento (atributos de perfil). | Media |
+| `T → OrderCount → Y` | **Mediador $M_1$:** usar un cupón reduce el precio efectivo e induce compras adicionales en el mes ($T \to \text{OrderCount}$); mayor volumen de pedidos consolida retención ($\text{OrderCount} \to Y$). Condicionar en `OrderCount` bloquea el efecto mediado y subestima el ATE total. | Post-tratamiento y pre-resultado (asumido en ventana mensual). | Media / Alta |
+| `T → CashbackAmount → Y` | **Mediador $M_2$:** la redención de incentivos dispara reintegros monetarios acoplados ($T \to \text{CashbackAmount}$), que retienen al usuario en la plataforma (Fase 1: `Churn=1` recibe $-\$19{,}36$ menos de cashback). Excluido de $Z$ por ser post-tratamiento. | Post-tratamiento (consecuencia económica del incentivo usado). | Media |
+| `T → Y` | **Efecto directo:** impacto causal directo del incentivo sobre la retención (percepción de valor y lealtad hacia el motor CRM) no canalizado por pedidos adicionales o cashback acumulado. | Ventana del último mes ($T$ precede a la decisión de churn). | Media |
+| `T → DaySinceLastOrder ← Y` | **Colisionador $C$:** redimir un cupón implica actividad reciente y acorta los días desde la última compra ($T \to C$, signo $-$); a la inversa, el proceso de abandono detiene compras y alarga esa recencia ($Y \to C$, signo $+$). Condicionar en `DaySinceLastOrder` abre la ruta no causal $T \to C \leftarrow Y$ (sesgo de Berkson / casi-leakage temporal). | Post-tratamiento y post/co-resultado (descendiente común). | Alta |
+| `U_engagement → {HourSpendOnApp, T, Y}` | **Latente no observada:** afinidad intrínseca con la marca impulsa horas en app, cacería de incentivos y menor abandono; no se observa directamente en el dataset. | Latente continua (confusión residual). | Alta |
 
 ### 4.2 Variables latentes no observadas
-- U_engagement (afinidad con la marca): ¿afecta T e Y? Plausibilidad, dirección del sesgo esperado y análisis de sensibilidad (`add_unobserved_common_cause`).
+1. **`U_engagement` (Afinidad intrínseca con la marca / intención latente de compra):**
+   - **A qué afecta:** incrementa `HourSpendOnApp` ($+$) y la probabilidad de usar cupones $T$ ($+$), mientras reduce directamente el abandono $Y = \text{Churn}$ ($-$).
+   - **Dirección del sesgo esperado sobre el ATE:** como $U_{\text{engagement}}$ correlaciona positivamente con $T$ y negativamente con `Churn`, si `Tenure` y `HourSpendOnApp` no la absorben por completo, genera un **sesgo negativo** (hace que el estimador parezca *más protector* —más negativo en puntos porcentuales de churn— de lo que realmente es, confundiendo a usuarios *"sure things"* con eficacia del cupón).
+2. **`U_severidad_incidente` (Gravedad no observada de fallas de servicio):**
+   - **A qué afecta:** `Complain` es un indicador binario (`0/1`) que oculta la intensidad del problema (demora leve vs. pedido dañado o contracargo). Una falla severa dispara cupones compensatorios de mayor esfuerzo ($U \to T$, $+$) y eleva fuertemente `Churn` ($U \to Y$, $+$).
+   - **Dirección del sesgo esperado sobre el ATE:** asociación positiva tanto con $T$ como con $Y$, introduciendo **sesgo positivo sobre `Churn`** que atenúa el efecto protector o incluso invierte su signo hacia $\text{ATE} > 0$ (mecanismo de paradoja de Simpson residual dentro de `Complain = 1`).
+3. **`U_sensibilidad_precio` (Perfil *deal-hunter* / elasticidad al descuento):**
+   - **A qué afecta:** usuarios oportunistas buscan activamente cupones ($U \to T$, $+$) pero cambian de plataforma apenas terminan las promociones ($U \to Y$, $+$).
+   - **Dirección del sesgo esperado sobre el ATE:** introduce **sesgo positivo sobre `Churn`** (subestima la retención genuina generada por el incentivo).
+- **Estrategia de análisis de sensibilidad (`add_unobserved_common_cause` de DoWhy):** En Fase 4 se evalúa la robustez del estimando backdoor mediante `refute_estimate(..., method_name="add_unobserved_common_cause")`, inyectando un confusor sintético con distintas magnitudes de efecto sobre $T$ y sobre $Y$ para determinar el umbral de confusión oculta necesario para anular o revertir el signo del ATE; se complementa re-estimando el modelo causal al excluir covariables de temporalidad discutible (`SatisfactionScore` y `HourSpendOnApp`).
 
 ### 4.3 Amenazas a la validez interna
-- Confusión residual · causalidad inversa · SUTVA (interferencia entre clientes) · error de medición en T ("usó" vs "recibió") · positividad · selección muestral.
+- **Positividad / soporte común (*overlap*):** En `make_clean_dataset()` ($N = 2.982$), sobre las `2.849` filas con tratamiento observado (`133` NA en `coupon_any`, $4{,}46\%$), el **$80{,}73\%$ ($n = 2.300$) corresponde a tratados ($T=1$) y solo el $19{,}27\%$ ($n = 549$) a controles ($T=0$)**. En subgrupos de alta propensión ($\hat{e}(Z) \to 1$), los pesos IPW del grupo control $1 / (1 - \hat{e}(Z))$ pueden volverse inestables, exigiendo inspección de histogramas de propensión, *trimming* y verificación de balance ($\text{SMD} < 0{,}1$). Asimismo, en Fase 1 se comprobó que los `133` NA de `CouponUsed` siguen un mecanismo MAR ($\text{AUC} = 0{,}9652$, $\chi^2$ vs `Churn` $= 19{,}88$, $p = 8{,}23 \times 10^{-6}$), por lo que imputarlos ingenuamente como `0` contaminaría el grupo control.
+- **Error de medición en $T$ (TOT vs. ITT y ruido en el archivo crudo):** La variable observada `CouponUsed` mide **redención efectiva del cupón**, no asignación o envío del incentivo por el motor de recomendaciones. Por lo tanto, el estimando captura un efecto tipo *Treatment on the Treated* (TOT) mezclado con autoselección de canje, no un *Intention-to-Treat* (ITT) de campaña. Adicionalmente, la autopsia forense de la Entrada 3 (Experimento #1) demostró que en las **`2.638` copias casi duplicadas (`ID + 1470`)** eliminadas en preprocesamiento, `CouponUsed` era **la columna más perturbada** (cambiaba en **`1.469` pares** con idéntico `Churn`), lo que introducía error de medición artificial en $T$ y atenuación causal hacia cero en los datos crudos.
+- **Orden temporal asumido (corte transversal "último mes"):** `CouponUsed`, `OrderCount`, `CashbackAmount`, `DaySinceLastOrder`, `HourSpendOnApp`, `Complain` y `SatisfactionScore` corresponden a una misma ventana mensual agregada sin marcas de tiempo; la dirección $Z \to T \to M \to Y$ y $T \to C \leftarrow Y$ depende de supuestos sustantivos del dominio.
+- **Causalidad inversa y asignación reactiva (`Complain → T`):** El CRM asigna cupones de retención de manera reactiva ante reclamos recientes (`Complain = 1` presenta `32,63%` de churn frente a `11,11%` sin reclamo) o frente a señales de desvinculación inminente no registradas en $Z$.
+- **Confusión residual:** Variables potencialmente relevantes (nivel de ingresos, promociones de la competencia, antigüedad de suscripción o precios relativos) no están disponibles en la tabla.
+- **SUTVA (interferencia y múltiples versiones del tratamiento):** Puede haber interferencia entre clientes del mismo hogar o dispositivos compartidos, y la binarización $T = \mathbb{I}(\text{CouponUsed} \ge 1)$ agrupa intensidades heterogéneas (`CouponUsed` varía de `1` a `16` entre tratados) y distintos valores monetarios de incentivo bajo una misma etiqueta `T=1`.
+- **Selección muestral y validez externa:** El archivo crudo de Kaggle (`5.630` filas de procedencia corporativa anónima) había sido aumentado con ruido (`2.638` pares `ID + 1470` más `10` duplicados exactos adicionales; `557` duplicados exactos en bruto), dejando **$N = 2.982$** observaciones únicas (`Train = 2.385`, `Test = 597`). Los hallazgos son válidos para esa cartera histórica y no deben extrapolarse sin recalibración temporal.
 
 ### 4.4 Resultados y refutaciones
 | Estimador | ATE | IC 95% | Comentario |
@@ -213,5 +252,15 @@ Notebook "Restart & Run All" sin errores · ATE con IC 95% y 3 refutaciones en v
 - **Test asociado:** `tests/test_inference.py` (tests unitarios con datos sintéticos + verificación de fronteras de rol + integración sobre `make_clean_dataset()`).
 - **Actualización [2026-11-14 16:50]:** re-ejecutado sobre N = 2.982 por la Entrada 3, Experimento #1 (eliminación de 2.638 copias casi duplicadas con `ID + 1470` en `src/preprocessing.py`); se actualizaron la fecha real en Entrada 1 §1.5, la Entrada 2 (filas F1 y §2.1) y la descripción del PR #11 sin cambios en el código de Fase 1.
 
-#### Sesión IA-05 · _fecha_ · _tema_
+#### Sesión IA-05 · 2026-11-14 17:18 · Formalización del debate causal (Entrada 4 §4.1–4.3) y notebook maestro (Sección 0, Fase 1 y esqueleto)
+- **Herramienta:** Google Antigravity (agente de IA con acceso al workspace).
+- **Operador:** Carola Nasif (Project Lead & Scrum Master).
+- **Prompt (resumen fiel):** "En rama nueva docs/entrada4-notebook desde origin/feat/fase1-inferencia, completar BITACORA.md Entrada 4 §4.1–4.3 sin tocar §4.4 (de Julián) ni poner resultados numéricos de Fase 4; armar el esqueleto del notebook maestro notebooks/TP_Integrador_Final.ipynb con portada, Sección 0 (setup e imports desde src), Sección 1 (Fase 1 completa con Markdown teórico previo, gráficos y tablas numeradas), encabezados pendientes de Secciones 2–6, referencias bibliográficas verificadas y declaración de uso de IA; ejecutar Restart & Run All, pasar ruff/pytest y abrir PR con 'Depende de #11'."
+- **Qué se hizo:**
+  - `BITACORA.md` (Entrada 4 §4.1–4.3): formalización del DAG Opción A, tabla de justificación arco por arco (`Z`, `M`, `C`, `U_engagement`), discusión de temporalidad ambigua en `SatisfactionScore` y `HourSpendOnApp`, 3 latentes no observadas con dirección esperada del sesgo sobre `Churn` y protocolo de sensibilidad (`add_unobserved_common_cause`), y 7 amenazas a la validez interna cuantificadas sobre `N = 2.982` (`80,73%` tratados / `549` controles / `133` NA MAR, TOT vs ITT, `1.469` pares perturbados en `CouponUsed`).
+  - `notebooks/TP_Integrador_Final.ipynb`: portada institucional + índice general, Sección 0 (`cleaning_summary()` y `load_split()`), Sección 1 completa invocando exclusivamente funciones de `src.preprocessing` y `src.inference` (auditoría univariada/bivariada, Pearson vs Spearman, faltantes MCAR/MAR/MNAR, Welch t + Mann-Whitney + χ² + potencia, ANOVA/Welch/Kruskal + Q-Q por grupo + post-hoc Games-Howell/Tukey/Bonferroni), encabezados pendientes de Secciones 2–6 con responsable, bibliografía verificada por búsqueda web y remisión a Entrada 5 para uso de IA.
+- **Qué se aceptó / qué se rechazó:** Se aceptó mantener intacto el apartado §4.4 (`Resultados y refutaciones`) para evitar conflictos con la rama de Fase 4 de Julián y prohibir lógica estadística duplicada en el notebook. Se rechazó incluir estimaciones numéricas anticipadas de ATE/CATE o citas bibliográficas sin verificación previa de autor, año, título y revista.
+- **Test y verificación asociada:** Ejecución integral con `jupyter nbconvert --to notebook --execute --inplace notebooks/TP_Integrador_Final.ipynb` (sin errores, salidas persistidas) + Quality Gate (`ruff check .` y `pytest -q`).
+
+#### Sesión IA-06 · _fecha_ · _tema_
 - Herramienta / modelo · Operador · Prompt · Qué se aceptó · Qué se rechazó y por qué · Test asociado.
