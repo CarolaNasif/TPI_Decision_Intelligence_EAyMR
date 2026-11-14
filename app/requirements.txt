@@ -1,0 +1,19 @@
+# Dependencias SOLO de la web app (app/app.py), para el deploy en Streamlit Community Cloud.
+#
+# Streamlit Cloud busca primero el requirements.txt del directorio de la app, así que este
+# archivo reemplaza al de la raíz en el deploy. El de la raíz incluye dowhy, econml, jupyterlab
+# y statsmodels, que la app NO usa (solo lee artefactos de artifacts/) y que hacen peligrar
+# el límite de 1 GB de RAM del tier gratuito.
+#
+# scikit-learn va pineado EXACTO: artifacts/best_model.joblib se serializó con 1.5.2 y
+# desempaquetarlo con otra versión puede fallar o cambiar las predicciones silenciosamente.
+# Verificado en un venv limpio con solo este archivo (ver BITACORA.md, Entrada 5).
+
+streamlit==1.67.0
+pandas==2.3.3
+numpy==2.0.2
+scikit-learn==1.5.2
+scipy==1.15.3
+joblib==1.6.0
+plotly==7.1.0
+pyarrow==26.0.1
