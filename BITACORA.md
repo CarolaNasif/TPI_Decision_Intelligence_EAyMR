@@ -141,7 +141,7 @@ Efecto sobre la probabilidad de churn, en pp (negativo = el cupón retiene):
 |---|---|---|---|
 | Ingenuo Y ~ T | −0,35 | [−4,15; +3,45] | Churn 18,0% con cupón vs 18,4% sin cupón (población con soporte común) |
 | **Backdoor regresión lineal** (principal) | **−1,16** | [−4,60; +2,28] | Modelo de probabilidad lineal, HC3. Sesgo de confusión (ingenuo − ajustado) = +0,81 pp |
-| IPW | −0,96 | [−4,90; +3,84] | IC por bootstrap (DoWhy) |
+| IPW | −1,09 | [−5,56; +3,14] | IC por bootstrap (DoWhy, semilla fija). Propensity: logística escalada que converge; con la de DoWhy por defecto el ATE variaba entre corridas (−0,96 / −0,99 / −1,02) según el orden de las columnas |
 | LinearDML | +1,11 | [−2,03; +4,24] | RF como nuisance, cross-fitting 5 |
 | CausalForestDML | +1,42 | [−1,46; +4,29] | ATE doblemente robusto del bosque |
 | Con M incluido (trampa) | −2,39 | [−5,91; +1,13] | Estima el efecto directo: bloquea T → OrderCount/Cashback → Y |

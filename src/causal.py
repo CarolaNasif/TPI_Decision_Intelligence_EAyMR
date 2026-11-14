@@ -293,6 +293,7 @@ def dowhy_pipeline(
     from dowhy import CausalModel
 
     gml = "".join(nx.generate_gml(graph))
+    np.random.seed(RANDOM_STATE)  # el bootstrap del IC de IPW en DoWhy usa el generador global de numpy
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         model = CausalModel(
@@ -305,7 +306,9 @@ def dowhy_pipeline(
         ipw = model.estimate_effect(
             estimand,
             method_name="backdoor.propensity_score_weighting",
-            method_params={"weighting_scheme": "ips_weight"},
+            # Logística escalada y con iteraciones suficientes para converger: con el modelo por defecto
+            # el resultado dependía del orden de las columnas (DoWhy las toma de un set).
+            method_params={"weighting_scheme": "ips_weight", "propensity_score_model": _propensity_model()},
             confidence_intervals=True,
         )
     return model, estimand, {"linear_regression": lr, "ipw": ipw}
@@ -317,13 +320,17 @@ def _estimate_dict(estimate) -> dict:
 
 
 # --------------------------------------------------------------------------- overlap y balance
-def propensity_scores(frame: pd.DataFrame, z_cols) -> np.ndarray:
-    """P(T=1 | Z) con logística sobre Z estandarizada (misma especificación que IPW)."""
+def _propensity_model():
     from sklearn.linear_model import LogisticRegression
     from sklearn.pipeline import make_pipeline
     from sklearn.preprocessing import StandardScaler
 
-    model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=5000))
+    return make_pipeline(StandardScaler(), LogisticRegression(max_iter=5000, tol=1e-8))
+
+
+def propensity_scores(frame: pd.DataFrame, z_cols) -> np.ndarray:
+    """P(T=1 | Z) con logística sobre Z estandarizada (misma especificación que IPW de DoWhy)."""
+    model = _propensity_model()
     return model.fit(frame[z_cols], frame[TREATMENT]).predict_proba(frame[z_cols])[:, 1]
 
 
