@@ -40,6 +40,7 @@ Este repositorio separa estrictamente ambos paradigmas de decisión —un torneo
 * **Dataset elegido (Opción A):** [*Ecommerce Customer Churn Analysis and Prediction*](https://www.kaggle.com/datasets/ankitverma2010/ecommerce-customer-churn-analysis-and-prediction) (Kaggle, autor: Ankit Verma).
 * **Archivo crudo:** `data/raw/E Commerce Dataset.xlsx` (hoja `E Comm`, `5.630` filas $\times$ `20` columnas).
 * **Licencia verificada en Kaggle:** [**CC BY-NC-SA 4.0**](https://creativecommons.org/licenses/by-nc-sa/4.0/) (*Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International* — uso académico y no comercial con atribución).
+* **Uso en deploy (Módulo 1 · `Diagnóstico & PCA`):** bajo esta licencia **CC BY-NC-SA 4.0** se autoriza versionar en el repositorio el archivo limpio `data/processed/dataset_clean.parquet` (`N = 2.982`) o una muestra equivalente citando explícitamente la fuente (Ankit Verma / Kaggle) y la licencia en este `README.md` y en `app/app.py`.
 * **Huella de integridad (SHA-256 del archivo crudo):**
   ```text
   db70f1e34bc5326887ea3fb3d2a0854e82c577d55ef3a76fdfb25328631bd44d
