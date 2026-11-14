@@ -546,14 +546,42 @@ def build_preprocessor(numeric_cols: list[str], categorical_cols: list[str]):
     )
 
 
-def fit_pca_train_only(X_train_num, n_components=None):
-    """Pipeline(StandardScaler -> PCA) ajustado SOLO en Train.
+def fit_pca_train_only(X_train_num: pd.DataFrame, n_components: int | None = None) -> dict[str, Any]:
+    """Pipeline(imputer mediana -> StandardScaler -> PCA) ajustado SOLO en Train.
 
-    Responsable: QA & Validation Engineer (Fase 2).
-    TODO: devolver el pipeline ajustado + varianza explicada + loadings;
-    luego aplicar .transform() a Test "a ciegas".
+    Devuelve el pipeline ajustado (para aplicar `.transform(X_test_num)` "a ciegas"),
+    la varianza explicada por componente y los loadings (cargas), nombrados PC1..PCk.
+    Solo con columnas numéricas (PCA sobre dummies queda fuera, ver docs/02 §2.5).
     """
-    raise NotImplementedError
+    from sklearn.decomposition import PCA
+    from sklearn.impute import SimpleImputer
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import StandardScaler
+
+    pipeline = Pipeline(
+        [
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+            ("pca", PCA(n_components=n_components, random_state=RANDOM_STATE)),
+        ]
+    )
+    pipeline.fit(X_train_num)
+
+    pca = pipeline.named_steps["pca"]
+    component_names = [f"PC{i + 1}" for i in range(pca.components_.shape[0])]
+    loadings = pd.DataFrame(pca.components_.T, index=X_train_num.columns, columns=component_names)
+    explained_variance_ratio = pd.Series(
+        pca.explained_variance_ratio_, index=component_names, name="explained_variance_ratio"
+    )
+    eigenvalues = pd.Series(pca.explained_variance_, index=component_names, name="eigenvalue")
+
+    return {
+        "pipeline": pipeline,
+        "loadings": loadings,
+        "explained_variance_ratio": explained_variance_ratio,
+        "eigenvalues": eigenvalues,
+        "kaiser_n_components": int((eigenvalues > 1).sum()),
+    }
 
 
 # --------------------------------------------------------------------------- CLI
