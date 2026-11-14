@@ -109,7 +109,7 @@
 - **Responsable:** Julián Agustín Lozano (ML)
 - **Mensaje principal:** Todos los estimadores ajustados incluyen el `0` en su IC 95% (**no hay evidencia de que usar cupón reduzca el churn**) y las `3` refutaciones de DoWhy pasan en verde.
 - **Puntos clave:**
-  - Estimadores ATE en soporte común (`N = 2.012`, en puntos porcentuales de churn): Backdoor regresión = **`−1,16 pp`** (`[-4,60; +2,28]`), IPW = **`−0,96 pp`** (`[-4,90; +3,84]`), LinearDML = **`+1,11 pp`** (`[-2,03; +4,24]`), CausalForestDML = **`+1,42 pp`** (`[-1,46; +4,29]`).
+  - Estimadores ATE en soporte común (`N = 2.012`, en puntos porcentuales de churn): Backdoor regresión = **`−1,16 pp`** (`[-4,60; +2,28]`), IPW = **`−1,09 pp`** (`[-5,56; +3,14]`), LinearDML = **`+1,11 pp`** (`[-2,03; +4,24]`), CausalForestDML = **`+1,42 pp`** (`[-1,46; +4,29]`).
   - Dosis-respuesta continua (`CouponUsed`): **`+1,07 pp` de churn por cupón adicional** (IC 95% `[+0,14; +2,00]`, $p = 0{,}024$).
   - Heterogeneidad (CATE): ningún segmento (`Tenure`, `Complain`, `SatisfactionScore`) es significativo; en `Complain = 1`, LinearDML estima **`+7,1 pp`** ($p = 0{,}065$).
   - Refutaciones DoWhy **3/3 verdes** (🟢): *Random Common Cause* (`−1,16 pp`, $p = 0{,}90$), *Placebo Treatment* (`+0,09 pp`, $p = 0{,}96$), *Data Subset 80%* (`−0,99 pp`, $p = 0{,}88$). Sensibilidad latente: `[−1,75; +6,17] pp`.

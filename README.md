@@ -173,7 +173,7 @@ flowchart LR
 | Estimador / Prueba causal | Población | ATE sobre Churn (pp) | IC 95% / $p$-valor | Interpretación |
 |---|---:|---:|---:|---|
 | **Backdoor: regresión lineal (principal)** | `2.012` | **`−1,16 pp`** | **`[−4,60; +2,28]` pp** | **No se rechaza $H_0: \text{ATE} = 0$** |
-| **Backdoor: IPW** (*trimming* `[0,05; 0,95]`) | `2.012` | **`−0,96 pp`** | `[−4,90; +3,84]` pp | No se rechaza $H_0$ |
+| **Backdoor: IPW** (*trimming* `[0,05; 0,95]`) | `2.012` | **`−1,09 pp`** | `[−5,56; +3,14]` pp | No se rechaza $H_0$ |
 | **LinearDML (EconML)** | `2.012` | **`+1,11 pp`** | `[−2,03; +4,24]` pp | No se rechaza $H_0$ (signo positivo) |
 | **CausalForestDML (EconML)** | `2.012` | **`+1,42 pp`** | `[−1,46; +4,29]` pp | No se rechaza $H_0$ (signo positivo) |
 | Dosis-respuesta por cupón adicional (`CouponUsed`) | `2.012` | **`+1,07 pp / cupón`** | `[+0,14; +2,00]` pp ($p = 0{,}024$) | Mayor intensidad se asocia a mayor churn |
@@ -212,7 +212,7 @@ TPI_Decision_Intelligence_EAyMR/
 │   ├── 04_esqueleto_slides.md          # Guion estructural de la defensa oral (12 slides)
 │   └── 04_esqueleto_slides.pdf         # Esqueleto preliminar en PDF (12 páginas)
 ├── notebooks/
-│   └── TP_Integrador_Final.ipynb       # Notebook maestro (Portada, Setup, Fase 1, Secc. 6 y enlaces)
+│   └── TP_Integrador_Final.ipynb       # Notebook maestro (Secciones 0, 1, 3, 4, 5, 6, 7 y 8; Fase 2 pendiente)
 ├── src/
 │   ├── __init__.py                     # Semilla única RANDOM_STATE = 42 y rutas del proyecto
 │   ├── preprocessing.py                # Carga, limpieza (ID+1470), split 80/20, missingness_report
