@@ -262,5 +262,15 @@ Notebook "Restart & Run All" sin errores · ATE con IC 95% y 3 refutaciones en v
 - **Qué se aceptó / qué se rechazó:** Se aceptó mantener intacto el apartado §4.4 (`Resultados y refutaciones`) para evitar conflictos con la rama de Fase 4 de Julián y prohibir lógica estadística duplicada en el notebook. Se rechazó incluir estimaciones numéricas anticipadas de ATE/CATE o citas bibliográficas sin verificación previa de autor, año, título y revista.
 - **Test y verificación asociada:** Ejecución integral con `jupyter nbconvert --to notebook --execute --inplace notebooks/TP_Integrador_Final.ipynb` (sin errores, salidas persistidas) + Quality Gate (`ruff check .` y `pytest -q`).
 
-#### Sesión IA-06 · _fecha_ · _tema_
+#### Sesión IA-06 · 2026-11-14 18:28 · Conclusiones ejecutivas (Sección 6), README editorial y esqueleto de slides
+- **Herramienta:** Google Antigravity (agente de IA con acceso al workspace).
+- **Operador:** Carola Nasif (Project Lead & Scrum Master).
+- **Prompt (resumen fiel):** "Monitorear merges en orden #1 → #2 → #11 → #12 → #13 → #14 tras [APROBADO] de QA sin usar squash/rebase; en rama de #14 completar Sección 6 del notebook maestro (con resultados verificados de model_results.json y causal_results.json, umbral -ATE·V > c, recomendación y limitaciones); en nueva rama docs/readme crear README.md editorial completo (licencia Kaggle verificada, diagrama Mermaid, comandos, tabla de resultados) y esqueleto de 10-12 slides PDF; respetar fronteras (no tocar src/inference.py, app/, notebooks/borradores/ ni filas 6-13 de Entrada 2)."
+- **Qué se hizo:**
+  - `notebooks/TP_Integrador_Final.ipynb` (Sección 6 completa + Índice actualizado): síntesis predictiva (`Random Forest + isotónica` ROC-AUC Test `0,9461`, Brier `0,0643`, ECE `0,0179`, top permutación `Tenure`/`Complain`/`PreferedOrderCat`/`DaySinceLastOrder` vs sesgo MDI en `CashbackAmount`) vs evidencia causal (`N = 2.012` en soporte común, `808` excluidos por positividad, ATE backdoor `−1,16 pp` IC 95% `[−4,60; +2,28]`, IPW `−0,96 pp`, LinearDML `+1,11 pp`, CausalForestDML `+1,42 pp`, dosis-respuesta `+1,07 pp/cupón`, 3/3 refutaciones verdes, sensibilidad `[−1,75; +6,17] pp`, CATE `Complain` `+7,1 pp`, p = `0,065`), regla económica `$-\text{ATE}\cdot V > c$` (`c < 0,046·V` en cota optimista) y recomendación de experimento A/B (`RCT`).
+  - Rama `docs/readme` (PR nuevo): `README.md` editorial con licencia **CC BY-NC-SA 4.0** verificada en Kaggle, diagrama Mermaid, comandos de reproducción y tablas clave; más esqueleto de 12 slides (`docs/04_esqueleto_slides.md` y `docs/04_esqueleto_slides.pdf`).
+- **Qué se aceptó / qué se rechazó:** Se aceptó leer los JSON reales de `origin/feat/fase3-modelos` y `origin/feat/fase4-causal` vía `git show` para transcribir cifras exactas sin extrapolación y mantener estrictamente la frontera de archivos asignados. Se rechazó modificar `src/inference.py`, `app/`, `notebooks/borradores/`, filas 6–13 de Entrada 2 o mergear PRs sin `[APROBADO]` explícito de QA (`@EmiMortarini`).
+- **Test y verificación asociada:** Re-ejecución completa del notebook (`nbconvert --execute`, 0 errores) y Quality Gate (`ruff check .` + `pytest -q`).
+
+#### Sesión IA-07 · _fecha_ · _tema_
 - Herramienta / modelo · Operador · Prompt · Qué se aceptó · Qué se rechazó y por qué · Test asociado.
