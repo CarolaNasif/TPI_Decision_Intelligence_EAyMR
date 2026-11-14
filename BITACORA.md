@@ -90,7 +90,7 @@ Notebook "Restart & Run All" sin errores · ATE con IC 95% y 3 refutaciones en v
 - **Hipótesis / qué intentamos:** correr el torneo de Fase 3 (4 familias, StratifiedKFold(5) en Train) sobre el dataset limpio de la Sesión IA-03 (N = 5.073: sin los 557 duplicados exactos).
 - **Qué pasó (evidencia numérica):** Random Forest con ROC-AUC 0,973 en CV y 0,988 en Test; OOB 0,985. El árbol CART **sin podar** obtuvo AUC 0,917 en Test, **mejor** que el podado por CV (0,857): lo opuesto a lo esperable si sobreajusta.
 - **Diagnóstico de la causa:** comparando cada cliente con el de ID + 1470 aparecen **2.638 pares** que coinciden en 14-19 de las 19 columnas, con el **mismo Churn en el 100%** de los pares; entre filas no emparejadas coinciden 0-10 columnas, sin casos intermedios (14-19 vs 0-10). Las columnas que más difieren dentro del par son `CouponUsed` (1.469 pares), `MaritalStatus` (827) y `SatisfactionScore` (568). El archivo es un dataset **aumentado con ruido**: 2.638 originales + 2.638 copias perturbadas + 354 clientes sin par. Los 557 duplicados exactos eran el subconjunto de copias sin perturbar. Con las copias, un cliente de Test tiene a su "gemelo" en Train → **leakage**: el árbol sin podar memoriza al gemelo y acierta.
-- **Cuantificación:** RF con 300 árboles, ROC-AUC en StratifiedKFold(5): **0,993 con copias vs 0,948 sin copias**. Además, las copias violan la independencia de las observaciones (Fases 1-2: errores estándar subestimados) y, al tener `CouponUsed` perturbado con el mismo Churn, **diluyen el efecto causal de T hacia 0** (Fase 4).
+- **Cuantificación:** RF con 300 árboles, ROC-AUC en StratifiedKFold(5): **0,993 con copias vs 0,948 sin copias**. Además, las copias violan la independencia de las observaciones (Fases 1-2: errores estándar subestimados). En Fase 4, al tener `CouponUsed` perturbado con el mismo Churn, cabía esperar atenuación del efecto. *Verificado en Fase 4 `[17:35]`:* ATE ajustado −0,48 pp con copias vs −1,25 pp sin copias, en la misma dirección, aunque ambos IC incluyen 0. Con copias el IC es engañosamente más angosto (±2,4 vs ±3,4 pp): falsa precisión.
 - **Qué aprendimos:** un desempeño excepcional es un síntoma a auditar, no un logro. Los duplicados exactos no agotan el problema: hay que buscar **casi duplicados** con una métrica de coincidencia por columnas.
 - **Corrección aplicada y resultado:** `near_duplicate_copies()` en `src/preprocessing.py` (ID + 1470 y ≥ 14/19 columnas iguales; se conserva el ID más bajo), aplicada antes del split junto con los duplicados exactos restantes (10). **5.630 → 2.982 filas** · churn 16,84% → 17,30% · T tratados 80,73% (133 NA) · Train 2.385 / Test 597. Reversible con `load_raw_data(drop_near_duplicates=False)` para sensibilidad. Tests: `test_near_duplicate_copies_detected`, `test_real_raw_dataset_copy_structure`. La Fase 1 (PR #11) debe re-ejecutarse sobre el dataset corregido.
 
@@ -131,20 +131,38 @@ Notebook "Restart & Run All" sin errores · ATE con IC 95% y 3 refutaciones en v
 - Confusión residual · causalidad inversa · SUTVA (interferencia entre clientes) · error de medición en T ("usó" vs "recibió") · positividad · selección muestral.
 
 ### 4.4 Resultados y refutaciones
+`[2026-11-14 17:35] · Julián Agustín Lozano (Backend & ML / Causal)` · Código: `src/causal.py` · Artefactos: `artifacts/causal_results.json`, `dag.dot`, `cate_grid.parquet`.
+
+**Población de estimación.** 2.982 clientes → 2.849 con T observado (133 con `CouponUsed` NA, que no se imputa) → **2.012 con soporte común**. Se excluyen **808 clientes de estratos sin controles**, donde el 100% usó cupón y no hay contrafáctico observable: `HourSpendOnApp` = 4 (605), `WarehouseToHome` = 7 (202) y 36 (25), `NumberOfDeviceRegistered` = 6 (87), `NumberOfAddress` = 11 (49) y `Tenure` = 31 (23). Se excluyen además 29 clientes por trimming del propensity fuera de [0,05; 0,95]. En la muestra completa, el 26,1% de los clientes caía fuera de ese rango (violación de positividad). El ATE estimado es el de la **población con soporte común**; la regresión sobre la muestra completa se informa como sensibilidad (extrapola).
+
+**Identificación.** Con Z = 13 confusores el criterio backdoor se cumple (d-separación en `networkx`) y DoWhy identifica el mismo set (29 columnas codificadas). Agregar M u C lo viola: son descendientes de T. Con el latente `U_engagement` el backdoor **no** se cumple: la identificación descansa en el supuesto de no confusión no observada.
+
+**Balance.** max |SMD| 0,483 → **0,107** tras IPW. Variables con |SMD| > 0,1: 11 → 1.
+
+Efecto sobre la probabilidad de churn, en pp (negativo = el cupón retiene):
+
 | Estimador | ATE | IC 95% | Comentario |
 |---|---|---|---|
-| Ingenuo Y ~ T | | | |
-| Backdoor regresión lineal | | | |
-| IPW | | | |
-| LinearDML | | | |
-| Con M incluido (trampa) | | | |
-| Con C incluido (trampa) | | | |
+| Ingenuo Y ~ T | −0,35 | [−4,15; +3,45] | Churn 18,0% con cupón vs 18,4% sin cupón (población con soporte común) |
+| **Backdoor regresión lineal** (principal) | **−1,16** | [−4,60; +2,28] | Modelo de probabilidad lineal, HC3. Sesgo de confusión (ingenuo − ajustado) = +0,81 pp |
+| IPW | −1,09 | [−5,56; +3,14] | IC por bootstrap (DoWhy, semilla fija). Propensity: logística escalada que converge; con la de DoWhy por defecto el ATE variaba entre corridas (−0,96 / −0,99 / −1,02) según el orden de las columnas |
+| LinearDML | +1,11 | [−2,03; +4,24] | RF como nuisance, cross-fitting 5 |
+| CausalForestDML | +1,42 | [−1,46; +4,29] | ATE doblemente robusto del bosque |
+| Con M incluido (trampa) | −2,39 | [−5,91; +1,13] | Estima el efecto directo: bloquea T → OrderCount/Cashback → Y |
+| Con C incluido (trampa) | −0,74 | [−4,15; +2,68] | Abre T → DaySinceLastOrder ← Y (Berkson). Simulación con efecto conocido 0,10: **−0,46** al condicionar en C |
+| Muestra completa (sensibilidad) | −1,17 | [−4,55; +2,21] | Extrapola a estratos sin controles |
+| T continua: por cupón adicional | **+1,07** | [+0,14; +2,00] | p = 0,024. Más cupones se asocian a **más** churn, incluso ajustando por Z |
 
 | Refutador | Resultado | Semáforo |
 |---|---|---|
-| Random Common Cause | | |
-| Placebo Treatment | | |
-| Data Subset | | |
+| Random Common Cause (100 sim.) | −1,16 pp (Δ ≈ 0) | 🟢 |
+| Placebo Treatment (permute, 100 sim.) | +0,09 pp (≈ 0) | 🟢 |
+| Data Subset 80% (100 sim.) | −0,99 pp (dentro del IC) | 🟢 |
+| Extra: confusor no observado (fuerzas 0,01-0,10) | ATE entre −1,75 y +6,17 pp | ⚠️ informativo: un confusor moderado puede cambiar el signo |
+
+**Heterogeneidad (CATE).** LinearDML con X = (Tenure, Complain, SatisfactionScore): ningún coeficiente significativo. El más cercano es `Complain` (+7,1 pp, p = 0,065): en clientes con reclamo, el cupón no retiene y tiende a asociarse con más churn, consistente con cupones compensatorios que no resuelven el problema. Todos los CATE por segmento (reclamo, antigüedad, satisfacción) tienen IC que incluyen 0.
+
+**Conclusión.** No hay evidencia de que **usar** cupones reduzca el churn en la población con soporte común. Todos los estimadores dan IC que contienen 0, con rango de puntos de −1,2 a +1,4 pp, y las 3 refutaciones pasan. **H-causal-1 no se sostiene** (ni el ingenuo ni el ajustado muestran protección). **H-causal-2** (inversión de signo por `Complain`) tampoco: la confusión observada es débil (corr. `Complain`–T = −0,02). La relación dosis-respuesta positiva sugiere causalidad inversa o confusión no observada (clientes "cazadores de ofertas" con baja lealtad). Ambas quedan como hipótesis para el ensayo crítico. La política "dar cupón solo a CATE < 0" (36% de los clientes) no se recomienda sin validación experimental: la heterogeneidad no es significativa.
 
 ---
 
