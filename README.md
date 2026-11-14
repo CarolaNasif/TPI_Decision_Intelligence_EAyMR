@@ -5,7 +5,7 @@
 ![Dataset](https://img.shields.io/badge/dataset-Kaggle%20N%3D2.982-informational)
 ![License](https://img.shields.io/badge/license-CC%20BY--NC--SA%204.0-lightgrey)
 ![Status](https://img.shields.io/badge/status-entrega%20t%C3%A9cnica%20en%20revisi%C3%B3n-blue)
-![Deploy](https://img.shields.io/badge/deploy-Streamlit%20Cloud%20(pendiente%20URL)-orange)
+[![Deploy](https://img.shields.io/badge/deploy-Streamlit%20Cloud-brightgreen)](https://tpi-eamr-grupo-atomos.streamlit.app/)
 
 **Cátedra:** Estadística Aplicada y Modelos de Regresión (EAyMR 2026) · Universidad Católica Argentina (UCA) · Facultad de Ingeniería y Ciencias Agrarias · **Profesor:** Iván G. Vilaboa  
 **Dominio:** E-Commerce, Plataformas y Growth Marketing
@@ -241,7 +241,7 @@ TPI_Decision_Intelligence_EAyMR/
 * **Bitácora de ingeniería (5 entradas + trazabilidad IA):** [`BITACORA.md`](BITACORA.md)
 * **Notebook maestro:** [`notebooks/TP_Integrador_Final.ipynb`](notebooks/TP_Integrador_Final.ipynb)
 * **Esqueleto de presentación (defensa oral):** [`docs/04_esqueleto_slides.md`](docs/04_esqueleto_slides.md) · [`docs/04_esqueleto_slides.pdf`](docs/04_esqueleto_slides.pdf)
-* **Web App desplegada (Streamlit Community Cloud):** _pendiente de URL pública (a completar por Emilia Mortarini tras el deploy final)_.
+* **Web App desplegada (Streamlit Community Cloud):** [https://tpi-eamr-grupo-atomos.streamlit.app/](https://tpi-eamr-grupo-atomos.streamlit.app/)
 
 ---
 

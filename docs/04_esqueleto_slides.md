@@ -124,7 +124,7 @@
   - **Módulo 1 — Diagnóstico / PCA:** métricas del dataset depurado (`N = 2.982`), auditoría de faltantes y proyección PCA ajustada solo en Train.
   - **Módulo 2 — What-Is (Predictivo):** probabilidad individual de churn calibrada (`Random Forest + isotónica` desde `artifacts/best_model.joblib`) e importancia global por permutación.
   - **Módulo 3 — What-If (Causal):** grafo `dag.dot`, tabla/comparador de ATE con IC, semáforo de refutaciones (`causal_results.json`) y selector de perfiles CATE (`cate_grid.parquet`).
-  - Reproducibilidad en Streamlit Community Cloud garantizada mediante pines `pandas<3` y `networkx<3.5` en `requirements.txt` (`URL deploy: [pendiente de Emilia]`).
+  - Reproducibilidad en Streamlit Community Cloud garantizada mediante `app/requirements.txt` (`scikit-learn==1.5.2`) y pines `pandas<3` / `networkx<3.5` en la raíz (`URL deploy: https://tpi-eamr-grupo-atomos.streamlit.app/`).
 - **Figura / Tabla a insertar:** `[CAPTURAS A AGREGAR: Screenshots de los 3 módulos de app/app.py desplegados + video backup MP4 para la defensa]`
 
 ---
