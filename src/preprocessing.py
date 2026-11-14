@@ -92,6 +92,10 @@ CATEGORY_FIXES: dict[str, dict[str, str]] = {
     "PreferedOrderCat": {"Mobile": "Mobile Phone"},
 }
 
+# Copias casi duplicadas del archivo original (ver near_duplicate_copies y Bitácora Entrada 3).
+COPY_ID_OFFSET: int = 1470
+COPY_MIN_EQUAL_COLS: int = 14  # de 19 columnas no-ID
+
 
 # --------------------------------------------------------------------------- carga y limpieza
 def file_sha256(path: str | Path) -> str:
@@ -114,16 +118,41 @@ def duplicate_profiles(df: pd.DataFrame) -> pd.Series:
     return df.duplicated(subset=cols, keep="first")
 
 
-def load_raw_data(
-    path: str | Path = RAW_PATH, sheet: str = RAW_SHEET, drop_duplicates: bool = True
-) -> pd.DataFrame:
-    """Carga el dataset crudo, normaliza categorías y elimina perfiles duplicados.
+def near_duplicate_copies(
+    df: pd.DataFrame, offset: int = COPY_ID_OFFSET, min_equal: int = COPY_MIN_EQUAL_COLS
+) -> pd.Series:
+    """Máscara de las COPIAS casi duplicadas: fila con ID i+offset que coincide con la fila de ID i
+    en al menos `min_equal` columnas (NA = NA cuenta como coincidencia). Se conserva el ID más bajo.
 
-    Duplicados: el archivo original trae 556 pares de filas idénticas salvo el CustomerID
-    (IDs separados por 1470), y 557 tras unificar categorías. Son copias del proceso de
-    generación del dataset, no clientes distintos; dejarlas permitiría que el mismo cliente
-    caiga en Train y en Test (leakage).
-    `drop_duplicates=False` conserva el dataset original para análisis de sensibilidad.
+    En el archivo original hay 2.638 pares así (14-19 de 19 columnas iguales, mismo Churn en el
+    100% de los pares); entre filas no emparejadas coinciden 0-10 columnas, sin casos intermedios.
+    """
+    id_col = ID_COLS[0]
+    cols = [c for c in df.columns if c not in ID_COLS]
+    s = df.set_index(id_col)[cols]
+    base = s[(s.index + offset).isin(s.index)]
+    copy = s.loc[base.index + offset].set_axis(base.index)
+    n_equal = (base.eq(copy) | (base.isna() & copy.isna())).sum(axis=1)
+    copy_ids = base.index[n_equal >= min_equal] + offset
+    return df[id_col].isin(copy_ids)
+
+
+def load_raw_data(
+    path: str | Path = RAW_PATH,
+    sheet: str = RAW_SHEET,
+    drop_duplicates: bool = True,
+    drop_near_duplicates: bool = True,
+) -> pd.DataFrame:
+    """Carga el dataset crudo, normaliza categorías y elimina copias y perfiles duplicados.
+
+    Copias casi duplicadas (`drop_near_duplicates`): 2.638 clientes con ID i+1470 repiten al
+    cliente de ID i en 14-19 de 19 columnas (con el mismo Churn); difieren sobre todo en
+    CouponUsed, MaritalStatus y SatisfactionScore. Es un dataset aumentado con ruido: dejarlas
+    produce leakage Train/Test, rompe la independencia de las observaciones y diluye el efecto
+    causal de T. Se conserva el ID más bajo de cada par.
+    Duplicados exactos (`drop_duplicates`): filas idénticas salvo el CustomerID (10 tras quitar
+    las copias; 557 en el archivo original tras unificar categorías).
+    Ambos flags en False conservan el dataset original para análisis de sensibilidad.
     """
     path = Path(path)
     if path.suffix.lower() in {".xlsx", ".xls"}:
@@ -138,6 +167,8 @@ def load_raw_data(
         raise ValueError("Hay CustomerID repetidos en el dataset crudo")
 
     df = normalize_categories(df[EXPECTED_COLUMNS])
+    if drop_near_duplicates:
+        df = df.loc[~near_duplicate_copies(df)]
     if drop_duplicates:
         df = df.loc[~duplicate_profiles(df)]
     df = df.reset_index(drop=True)
@@ -159,9 +190,12 @@ def add_treatment(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def make_clean_dataset(path: str | Path = RAW_PATH, drop_duplicates: bool = True) -> pd.DataFrame:
+def make_clean_dataset(
+    path: str | Path = RAW_PATH, drop_duplicates: bool = True, drop_near_duplicates: bool = True
+) -> pd.DataFrame:
     """Carga + limpieza + tratamiento. Sin imputar: la imputación va dentro del Pipeline."""
-    df = add_treatment(load_raw_data(path, drop_duplicates=drop_duplicates))
+    raw = load_raw_data(path, drop_duplicates=drop_duplicates, drop_near_duplicates=drop_near_duplicates)
+    df = add_treatment(raw)
     for col in CATEGORICAL_COLS:
         df[col] = df[col].astype("category")
     return df
@@ -171,10 +205,12 @@ def cleaning_summary(path: str | Path = RAW_PATH) -> pd.DataFrame:
     """Métricas antes/después de la limpieza (insumo para la auditoría de Fase 1)."""
     raw = pd.read_excel(path, sheet_name=RAW_SHEET) if Path(path).suffix == ".xlsx" else pd.read_csv(path)
     clean = load_raw_data(path)
+    norm = normalize_categories(raw)
     rows = [
         ("Filas", len(raw), len(clean)),
         ("Tasa de churn", round(raw[TARGET_COL].mean(), 4), round(clean[TARGET_COL].mean(), 4)),
         ("Perfiles duplicados", int(duplicate_profiles(raw).sum()), int(duplicate_profiles(clean).sum())),
+        ("Copias casi duplicadas (ID+1470)", int(near_duplicate_copies(norm).sum()), 0),
     ]
     for col in CATEGORY_FIXES:
         rows.append((f"Categorías en {col}", raw[col].nunique(), clean[col].nunique()))

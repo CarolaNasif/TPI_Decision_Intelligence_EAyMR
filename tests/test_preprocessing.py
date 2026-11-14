@@ -85,6 +85,23 @@ def test_duplicates_kept_when_requested(raw_csv, fake_raw):
     assert len(prep.load_raw_data(raw_csv, drop_duplicates=False)) == len(fake_raw) + 30
 
 
+def test_near_duplicate_copies_detected(fake_raw):
+    df = fake_raw.copy()
+    base_ids = df["CustomerID"].iloc[:5].to_numpy()
+    copies = df.iloc[:5].copy()
+    copies["CustomerID"] = base_ids + prep.COPY_ID_OFFSET + 10_000
+    copies[["CouponUsed", "MaritalStatus", "SatisfactionScore"]] = [9.0, "Single", 1]  # ruido en 3 columnas
+    df.loc[df["CustomerID"].isin(base_ids), "CustomerID"] += 10_000
+    df = pd.concat([df, copies], ignore_index=True)
+    mask = prep.near_duplicate_copies(df)
+    flagged = set(df.loc[mask, "CustomerID"])
+    assert flagged == set(copies["CustomerID"]), "Debe marcar solo las copias (ID mayor)"
+
+
+def test_unrelated_rows_are_not_near_duplicates(fake_raw):
+    assert not prep.near_duplicate_copies(fake_raw).any()
+
+
 def test_treatment_definition_and_na_preserved(clean):
     src, t = clean[prep.TREATMENT_SOURCE_COL], clean[prep.TREATMENT_COL]
     assert t.isna().equals(src.isna()), "Los NA de CouponUsed deben seguir siendo NA en T"
@@ -145,6 +162,17 @@ def test_preprocessor_handles_unseen_category(clean):
 @pytest.mark.skipif(not prep.RAW_PATH.exists(), reason="data/raw/E Commerce Dataset.xlsx no descargado")
 def test_real_raw_dataset_cleaning():
     df = prep.make_clean_dataset()
-    assert len(df) == 5073
+    assert len(df) == 2982
     assert not prep.duplicate_profiles(df.drop(columns=prep.TREATMENT_COL)).any()
-    assert abs(df[prep.TARGET_COL].mean() - 0.1658) < 0.001
+    assert not prep.near_duplicate_copies(df.drop(columns=prep.TREATMENT_COL)).any()
+    assert abs(df[prep.TARGET_COL].mean() - 0.1730) < 0.001
+
+
+@pytest.mark.skipif(not prep.RAW_PATH.exists(), reason="data/raw/E Commerce Dataset.xlsx no descargado")
+def test_real_raw_dataset_copy_structure():
+    raw = prep.normalize_categories(pd.read_excel(prep.RAW_PATH, sheet_name=prep.RAW_SHEET))
+    mask = prep.near_duplicate_copies(raw)
+    assert mask.sum() == 2638
+    copies = raw.loc[mask].set_index("CustomerID")
+    originals = raw.set_index("CustomerID").loc[copies.index - prep.COPY_ID_OFFSET]
+    assert (copies[prep.TARGET_COL].to_numpy() == originals[prep.TARGET_COL].to_numpy()).all()
