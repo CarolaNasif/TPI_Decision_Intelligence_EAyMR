@@ -1,0 +1,539 @@
+{
+  "treatment": "coupon_any",
+  "outcome": "Churn",
+  "unidad": "diferencia de probabilidad de churn (x100 = pp); negativo = el cupón retiene",
+  "n": {
+    "z_cols": [
+      "Tenure",
+      "Complain",
+      "SatisfactionScore",
+      "WarehouseToHome",
+      "NumberOfAddress",
+      "na_Tenure",
+      "na_WarehouseToHome",
+      "na_HourSpendOnApp",
+      "CityTier_2",
+      "CityTier_3",
+      "PreferedOrderCat_Grocery",
+      "PreferedOrderCat_Laptop_and_Accessory",
+      "PreferedOrderCat_Mobile_Phone",
+      "PreferedOrderCat_Others",
+      "PreferredLoginDevice_Mobile_Phone",
+      "PreferredPaymentMode_Credit_Card",
+      "PreferredPaymentMode_Debit_Card",
+      "PreferredPaymentMode_E_wallet",
+      "PreferredPaymentMode_UPI",
+      "Gender_Male",
+      "MaritalStatus_Married",
+      "MaritalStatus_Single",
+      "HourSpendOnApp_1",
+      "HourSpendOnApp_2",
+      "HourSpendOnApp_3",
+      "NumberOfDeviceRegistered_2",
+      "NumberOfDeviceRegistered_3",
+      "NumberOfDeviceRegistered_4",
+      "NumberOfDeviceRegistered_5"
+    ],
+    "m_cols": [
+      "OrderCount",
+      "CashbackAmount"
+    ],
+    "c_cols": [
+      "DaySinceLastOrder"
+    ],
+    "n_total": 2982,
+    "n_used": 2012,
+    "n_dropped_treatment_na": 133,
+    "support": {
+      "n_antes": 2849,
+      "n_excluidos_estratos": 808,
+      "n_excluidos_trimming": 29,
+      "n_soporte": 2012,
+      "estratos_excluidos": [
+        {
+          "variable": "Tenure",
+          "nivel": "31.0",
+          "n": 23,
+          "share_tratados": 1.0
+        },
+        {
+          "variable": "HourSpendOnApp",
+          "nivel": "4.0",
+          "n": 605,
+          "share_tratados": 1.0
+        },
+        {
+          "variable": "WarehouseToHome",
+          "nivel": "36.0",
+          "n": 25,
+          "share_tratados": 1.0
+        },
+        {
+          "variable": "WarehouseToHome",
+          "nivel": "7.0",
+          "n": 202,
+          "share_tratados": 1.0
+        },
+        {
+          "variable": "NumberOfAddress",
+          "nivel": "11",
+          "n": 49,
+          "share_tratados": 1.0
+        },
+        {
+          "variable": "NumberOfDeviceRegistered",
+          "nivel": "6",
+          "n": 87,
+          "share_tratados": 1.0
+        }
+      ],
+      "ps_bounds": [
+        0.05,
+        0.95
+      ]
+    }
+  },
+  "dag_file": "dag.dot",
+  "cate_grid_file": "cate_grid.parquet",
+  "adjustment_set": [
+    "Tenure",
+    "Complain",
+    "SatisfactionScore",
+    "CityTier",
+    "PreferedOrderCat",
+    "HourSpendOnApp",
+    "PreferredLoginDevice",
+    "PreferredPaymentMode",
+    "Gender",
+    "MaritalStatus",
+    "WarehouseToHome",
+    "NumberOfAddress",
+    "NumberOfDeviceRegistered"
+  ],
+  "mediators": [
+    "OrderCount",
+    "CashbackAmount"
+  ],
+  "colliders": [
+    "DaySinceLastOrder"
+  ],
+  "latent": "U_engagement",
+  "backdoor": {
+    "con_latente": {
+      "no_descendants_of_T": true,
+      "descendants_in_set": [],
+      "blocks_all_backdoor_paths": false,
+      "satisfied": false,
+      "latent_nodes": [
+        "U_engagement"
+      ]
+    },
+    "sin_latente": {
+      "no_descendants_of_T": true,
+      "descendants_in_set": [],
+      "blocks_all_backdoor_paths": true,
+      "satisfied": true,
+      "latent_nodes": []
+    },
+    "Z+M": {
+      "no_descendants_of_T": false,
+      "descendants_in_set": [
+        "CashbackAmount",
+        "OrderCount"
+      ],
+      "blocks_all_backdoor_paths": false,
+      "satisfied": false,
+      "latent_nodes": [
+        "U_engagement"
+      ]
+    },
+    "Z+C": {
+      "no_descendants_of_T": false,
+      "descendants_in_set": [
+        "DaySinceLastOrder"
+      ],
+      "blocks_all_backdoor_paths": false,
+      "satisfied": false,
+      "latent_nodes": [
+        "U_engagement"
+      ]
+    },
+    "caminos": [
+      "coupon_any - Tenure - Churn",
+      "coupon_any - Complain - Churn",
+      "coupon_any - SatisfactionScore - Churn",
+      "coupon_any - CityTier - Churn",
+      "coupon_any - PreferedOrderCat - Churn",
+      "coupon_any - HourSpendOnApp - Churn",
+      "coupon_any - PreferredLoginDevice - Churn",
+      "coupon_any - PreferredPaymentMode - Churn",
+      "coupon_any - Gender - Churn",
+      "coupon_any - MaritalStatus - Churn",
+      "coupon_any - WarehouseToHome - Churn",
+      "coupon_any - NumberOfAddress - Churn",
+      "coupon_any - NumberOfDeviceRegistered - Churn"
+    ]
+  },
+  "dowhy_backdoor_set": [
+    "CityTier_2",
+    "CityTier_3",
+    "Complain",
+    "Gender_Male",
+    "HourSpendOnApp_1",
+    "HourSpendOnApp_2",
+    "HourSpendOnApp_3",
+    "MaritalStatus_Married",
+    "MaritalStatus_Single",
+    "NumberOfAddress",
+    "NumberOfDeviceRegistered_2",
+    "NumberOfDeviceRegistered_3",
+    "NumberOfDeviceRegistered_4",
+    "NumberOfDeviceRegistered_5",
+    "PreferedOrderCat_Grocery",
+    "PreferedOrderCat_Laptop_and_Accessory",
+    "PreferedOrderCat_Mobile_Phone",
+    "PreferedOrderCat_Others",
+    "PreferredLoginDevice_Mobile_Phone",
+    "PreferredPaymentMode_Credit_Card",
+    "PreferredPaymentMode_Debit_Card",
+    "PreferredPaymentMode_E_wallet",
+    "PreferredPaymentMode_UPI",
+    "SatisfactionScore",
+    "Tenure",
+    "WarehouseToHome",
+    "na_HourSpendOnApp",
+    "na_Tenure",
+    "na_WarehouseToHome"
+  ],
+  "primary_estimate": "Backdoor: regresión lineal",
+  "estimates": {
+    "Ingenuo (Y ~ T)": {
+      "ate": -0.0035197282824542195,
+      "ci": [
+        -0.041508453201128816,
+        0.03446899663622038
+      ]
+    },
+    "Backdoor: regresión lineal": {
+      "ate": -0.011589915195191314,
+      "ci": [
+        -0.046021561817444885,
+        0.02284173142706227
+      ]
+    },
+    "Backdoor: IPW": {
+      "ate": -0.00964020391956616,
+      "ci": [
+        -0.04899257618261779,
+        0.038391626130362094
+      ]
+    },
+    "LinearDML (EconML)": {
+      "ate": 0.011058515930320275,
+      "ci": [
+        -0.02028741260209336,
+        0.042404444462733906
+      ]
+    },
+    "CausalForestDML (EconML)": {
+      "ate": 0.014163397357015588,
+      "ci": [
+        -0.014591953177936226,
+        0.042918747891967396
+      ]
+    },
+    "Con M (trampa del mediador)": {
+      "ate": -0.02388538386311951,
+      "ci": [
+        -0.059090874308284275,
+        0.011320106582045256
+      ]
+    },
+    "Con C (trampa del colisionador)": {
+      "ate": -0.0073508602839090845,
+      "ci": [
+        -0.04148095658389298,
+        0.026779236016074813
+      ]
+    },
+    "Regresión en muestra completa (extrapola)": {
+      "ate": -0.011689605829409342,
+      "ci": [
+        -0.045524390499282794,
+        0.022145178840464106
+      ]
+    }
+  },
+  "naive_churn_rates": {
+    "T=1": 0.18045112781954886,
+    "T=0": 0.18397085610200364
+  },
+  "confounding_bias": 0.008070186912737094,
+  "dose_response_per_coupon": {
+    "ate": 0.010735114700544845,
+    "ci": [
+      0.0014282339870751743,
+      0.020041995414014517
+    ],
+    "p_value": 0.023775357445463576
+  },
+  "collider_simulation": {
+    "true_effect": 0.1,
+    "estimate_without_C": 0.100044258181884,
+    "estimate_with_C": -0.46332238737690506
+  },
+  "overlap": {
+    "quantiles": [
+      0.0,
+      0.05,
+      0.25,
+      0.5,
+      0.75,
+      0.95,
+      1.0
+    ],
+    "ps_treated": [
+      0.2945,
+      0.4768,
+      0.6574,
+      0.8063,
+      0.882,
+      0.9305,
+      0.9486
+    ],
+    "ps_control": [
+      0.2679,
+      0.4086,
+      0.5235,
+      0.6579,
+      0.7578,
+      0.8675,
+      0.9436
+    ],
+    "share_outside_05_95": 0.0,
+    "n_treated": 1463,
+    "n_control": 549,
+    "ipw_ate_trimmed_05_95": -0.010759824209530588,
+    "ipw_ate_trimmed_10_90": -0.0156712254806253
+  },
+  "overlap_full_sample": {
+    "quantiles": [
+      0.0,
+      0.05,
+      0.25,
+      0.5,
+      0.75,
+      0.95,
+      1.0
+    ],
+    "ps_treated": [
+      0.2816,
+      0.5034,
+      0.764,
+      0.8966,
+      0.9975,
+      0.9991,
+      1.0
+    ],
+    "ps_control": [
+      0.2521,
+      0.3998,
+      0.5194,
+      0.6613,
+      0.7677,
+      0.8832,
+      0.9509
+    ],
+    "share_outside_05_95": 0.26114426114426115,
+    "n_treated": 2300,
+    "n_control": 549,
+    "ipw_ate_trimmed_05_95": -0.009590061082354606,
+    "ipw_ate_trimmed_10_90": -0.022635458411952164
+  },
+  "balance": {
+    "max_abs_smd_antes": 0.4831226232464702,
+    "max_abs_smd_despues": 0.10701943546410611,
+    "n_smd_mayor_0_1_antes": 11,
+    "n_smd_mayor_0_1_despues": 1
+  },
+  "refutations": [
+    {
+      "refutador": "Random Common Cause",
+      "ate_original": -0.011589915195191314,
+      "ate_nuevo": -0.011597620365106349,
+      "p_value_dowhy": 0.8999999999999999,
+      "semaforo": "verde",
+      "interpretacion": "Agregar un confusor aleatorio no debería mover el ATE."
+    },
+    {
+      "refutador": "Placebo Treatment",
+      "ate_original": -0.011589915195191314,
+      "ate_nuevo": 0.0009299219005619313,
+      "p_value_dowhy": 0.96,
+      "semaforo": "verde",
+      "interpretacion": "Con T permutado al azar el efecto debe ser ≈ 0."
+    },
+    {
+      "refutador": "Data Subset (80%)",
+      "ate_original": -0.011589915195191314,
+      "ate_nuevo": -0.009854406212921466,
+      "p_value_dowhy": 0.8799999999999999,
+      "semaforo": "verde",
+      "interpretacion": "Re-estimar en submuestras del 80% debe dejar el ATE dentro del IC original."
+    }
+  ],
+  "sensitivity_unobserved": {
+    "strengths": [
+      0.01,
+      0.05,
+      0.1
+    ],
+    "ate_min": -0.017462974651342195,
+    "ate_max": 0.061663829111159224
+  },
+  "linear_dml_coefs": [
+    {
+      "": "Tenure",
+      "point_estimate": 0.001,
+      "stderr": 0.002,
+      "zstat": 0.285,
+      "pvalue": 0.776,
+      "ci_lower": -0.003,
+      "ci_upper": 0.004
+    },
+    {
+      "": "Complain",
+      "point_estimate": 0.071,
+      "stderr": 0.038,
+      "zstat": 1.842,
+      "pvalue": 0.065,
+      "ci_lower": -0.005,
+      "ci_upper": 0.146
+    },
+    {
+      "": "SatisfactionScore",
+      "point_estimate": 0.01,
+      "stderr": 0.012,
+      "zstat": 0.799,
+      "pvalue": 0.424,
+      "ci_lower": -0.014,
+      "ci_upper": 0.034
+    }
+  ],
+  "cate_subgroups": [
+    {
+      "variable": "Complain",
+      "segmento": "con reclamo",
+      "n": 594,
+      "cate": 0.03945580917919677,
+      "ci_inf": -0.10053487625079618,
+      "ci_sup": 0.1794464946091897
+    },
+    {
+      "variable": "Complain",
+      "segmento": "sin reclamo",
+      "n": 1418,
+      "cate": -0.0019970275488434986,
+      "ci_inf": -0.10728038377081886,
+      "ci_sup": 0.10328632867313184
+    },
+    {
+      "variable": "SatisfactionScore",
+      "segmento": "1",
+      "n": 226,
+      "cate": -0.014690427096306203,
+      "ci_inf": -0.12797571253330067,
+      "ci_sup": 0.09859485834068824
+    },
+    {
+      "variable": "SatisfactionScore",
+      "segmento": "2",
+      "n": 405,
+      "cate": -0.012556240049092447,
+      "ci_inf": -0.1257024297830434,
+      "ci_sup": 0.1005899496848585
+    },
+    {
+      "variable": "SatisfactionScore",
+      "segmento": "3",
+      "n": 611,
+      "cate": 0.028384184770072266,
+      "ci_inf": -0.09466350944851289,
+      "ci_sup": 0.1514318789886574
+    },
+    {
+      "variable": "SatisfactionScore",
+      "segmento": "4",
+      "n": 385,
+      "cate": 0.00951773513729783,
+      "ci_inf": -0.09805448565716864,
+      "ci_sup": 0.11708995593176426
+    },
+    {
+      "variable": "SatisfactionScore",
+      "segmento": "5",
+      "n": 385,
+      "cate": 0.020787569894692524,
+      "ci_inf": -0.09946593975486544,
+      "ci_sup": 0.14104107954425046
+    },
+    {
+      "variable": "Tenure",
+      "segmento": "0-2",
+      "n": 524,
+      "cate": 0.011517037079854294,
+      "ci_inf": -0.154871211751273,
+      "ci_sup": 0.17790528591098154
+    },
+    {
+      "variable": "Tenure",
+      "segmento": "11-20",
+      "n": 500,
+      "cate": 0.019190643391020362,
+      "ci_inf": -0.06044790265157332,
+      "ci_sup": 0.09882918943361403
+    },
+    {
+      "variable": "Tenure",
+      "segmento": "21+",
+      "n": 209,
+      "cate": 0.026000766854001288,
+      "ci_inf": -0.026804868046458617,
+      "ci_sup": 0.07880640175446119
+    },
+    {
+      "variable": "Tenure",
+      "segmento": "3-5",
+      "n": 225,
+      "cate": 0.01490796943180433,
+      "ci_inf": -0.08803361600660982,
+      "ci_sup": 0.11784955487021846
+    },
+    {
+      "variable": "Tenure",
+      "segmento": "6-10",
+      "n": 554,
+      "cate": -0.006884001681973435,
+      "ci_inf": -0.11696746582883337,
+      "ci_sup": 0.10319946246488647
+    }
+  ],
+  "cate_individual_quantiles": {
+    "p05": -0.11558023902423686,
+    "p25": -0.033411860438039585,
+    "p50": 0.020387682837910478,
+    "p75": 0.052068570185328594,
+    "p95": 0.13676889795804587
+  },
+  "policy": {
+    "share_cate_negativo": 0.3658051689860835,
+    "efecto_medio_dar_a_todos_pp": 1.0241036574643536,
+    "efecto_medio_solo_cate_negativo_pp": -6.546915402022516,
+    "churn_evitado_por_100_clientes_targeting": 2.394895494974439
+  },
+  "effect_modifiers": [
+    "Tenure",
+    "Complain",
+    "SatisfactionScore"
+  ]
+}
