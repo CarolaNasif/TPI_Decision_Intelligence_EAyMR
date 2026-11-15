@@ -4,7 +4,7 @@
 ![Quality Gate](https://img.shields.io/badge/quality%20gate-ruff%20%2B%20pytest-brightgreen)
 ![Dataset](https://img.shields.io/badge/dataset-Kaggle%20N%3D2.982-informational)
 ![License](https://img.shields.io/badge/license-CC%20BY--NC--SA%204.0-lightgrey)
-![Status](https://img.shields.io/badge/status-entrega%20t%C3%A9cnica%20en%20revisi%C3%B3n-blue)
+![Status](https://img.shields.io/badge/status-v1.0%20entrega-brightgreen)
 [![Deploy](https://img.shields.io/badge/deploy-Streamlit%20Cloud-brightgreen)](https://tpi-eamr-grupo-atomos.streamlit.app/)
 
 **Cátedra:** Estadística Aplicada y Modelos de Regresión (EAyMR 2026) · Universidad Católica Argentina (UCA) · Facultad de Ingeniería y Ciencias Agrarias · **Profesor:** Iván G. Vilaboa  
@@ -109,6 +109,8 @@ flowchart LR
    # py -3.11 -m venv .venv; .\.venv\Scripts\Activate.ps1
 
    pip install -r requirements.txt
+   # O para reproducir exactamente los 163 paquetes congelados en el entorno de validación:
+   # pip install -r requirements.lock
    ```
 
 2. **Descargar el dataset crudo de Kaggle a `data/raw/E Commerce Dataset.xlsx`:**

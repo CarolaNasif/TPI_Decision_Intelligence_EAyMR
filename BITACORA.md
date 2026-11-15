@@ -6,7 +6,7 @@
 
 | Rol | Integrante | Firma |
 |---|---|---|
-| 👑 Project Lead & Scrum Master (PO) | **Carola Nasif** | ☐ |
+| 👑 Project Lead & Scrum Master (PO) | **Carola Nasif** | ☑ 2026-11-15 |
 | ⚙️ Backend & ML / Causal Engineer | **Julián Agustín Lozano** | ☐ |
 | 🎨 Frontend & UI/UX Engineer | **Emilia Mortarini** | ☐ |
 | 🔍 QA & Validation Engineer | **Emilia Mortarini** (co-auditoría cruzada con Carola Nasif) | ☐ |
@@ -227,7 +227,7 @@ Efecto sobre la probabilidad de churn, en pp (negativo = el cupón retiene):
 ---
 
 ## Entrada 5 — Trazabilidad y Uso Ético de Asistentes de IA
-**Responsable:** QA & Validation Engineer (con aportes de todos) · **Estado:** 🟢 abierta (registro vivo)
+**Responsable:** QA & Validation Engineer (con aportes de todos) · **Estado:** 🟢 CERRADA al code freeze (2026-11-15 23:59)
 
 **Política del equipo:** la IA se usa como *tutor y acelerador*, nunca como fuente de verdad. Toda afirmación numérica o de API generada por IA se verifica contra (a) los datos, (b) la documentación oficial o (c) un test determinístico antes de entrar a `main`.
 
@@ -430,5 +430,19 @@ Efecto sobre la probabilidad de churn, en pp (negativo = el cupón retiene):
   - Test de regresión sobre los artefactos reales: con las entradas como llegan del formulario, las predicciones coinciden con las del modelo en los 597 clientes de Test.
   - Verificación: `ruff check .` sin errores; `pytest -q` 87 passed; la app en un venv limpio con solo `app/requirements.txt` (`streamlit.testing.AppTest`) carga y predice sin excepciones; la app local, revisada en el navegador.
 
-#### Sesión IA-13 · _fecha_ · _tema_
+#### Sesión IA-13 · 2026-11-15 11:30-12:00 · Cierre de entrega (PR #24, reboot de Streamlit Cloud, corrección de `.devcontainer`, bibliografía Fase 2 y cierre de Entrada 5)
+- **Herramienta:** Google Antigravity (agente de IA con acceso al repositorio local y subagente de navegador).
+- **Operador:** Carola Nasif (Project Lead & Scrum Master).
+- **Prompt (resumen fiel):** "1) Mergear el PR #24 (con [APROBADO] de Emilia) con 'Create a merge commit' y ejecutar 'Reboot app' en Manage app de Streamlit Cloud para evitar caché residual, verificando que la app cargue. 2) Abrir PR Draft en rama `chore/cierre-entrega` desde `main` actualizado: cambiar `streamlit run src/__init__.py` por `streamlit run app/app.py` en `.devcontainer/devcontainer.json`, cerrar el Estado de la Entrada 5 al code freeze (`2026-11-15 23:59`), completar `Sesión IA-13` dejando reservada `Sesión IA-14` para Emilia, sumar en la Sección 7 del notebook maestro las citas de Fase 2 (Breusch y Pagan 1979; White 1980; MacKinnon y White 1985; Cook 1977) y actualizar el badge de estado en `README.md` a `v1.0 entrega`."
+- **Qué se hizo:**
+  - **Merge del PR #24 (`418c23c`) y *Reboot app* en Streamlit Community Cloud:** se mergeó `feat/app-explicacion-local` con `--merge` y se reinició el contenedor en `https://tpi-eamr-grupo-atomos.streamlit.app/`, confirmando que la aplicación levanta sin errores ni caché residual.
+  - **Rama `chore/cierre-entrega` (PR Draft de cierre):**
+    1. `.devcontainer/devcontainer.json`: reemplazado `src/__init__.py` por `app/app.py` en `openFiles` y `postAttachCommand.server` (resolviendo la observación #1 de QA del PR #22 para que GitHub Codespaces levante directamente la app interactiva).
+    2. `notebooks/TP_Integrador_Final.ipynb`: incorporadas en la **Sección 7 (Referencias Bibliográficas)** las 4 referencias econométricas de Fase 2 —Breusch & Pagan (1979, *Econometrica*), Cook (1977, *Technometrics*), MacKinnon & White (1985, *Journal of Econometrics*) y White (1980, *Econometrica*)— y ajustado el epígrafe de `Tabla 2.1` a `(nunca se afirma "aceptar H0")` (observación #2 de QA del PR #22).
+    3. `README.md`: actualizado el badge de estado a `v1.0 entrega` y agregada la opción de reproducción exacta con `pip install -r requirements.lock`.
+    4. `BITACORA.md`: firmada la fila de Project Lead (`☑ 2026-11-15`), actualizado el Estado de la **Entrada 5** a `🟢 CERRADA al code freeze (2026-11-15 23:59)`, registrada esta `Sesión IA-13` y reservada la `Sesión IA-14` para el cierre QA de Emilia.
+- **Qué se aceptó / qué se rechazó:** Se aceptó abrir el PR de cierre en modo **Draft** para que Julián (citas de Fase 4 y firma) y Emilia (firma, Estado de Entrada 3, test de imports, verificación de los 3 módulos online y `Sesión IA-14`) sumen sus commits sobre la misma rama antes del veredicto QA final, respetando estrictamente la Regla de Oro del enunciado. Se rechazó mergear a `main` o crear el tag `v1.0-entrega` antes de contar con las firmas de los 3 integrantes, las slides finales en `docs/` y el `[APROBADO]` de QA.
+- **Test y verificación asociada:** `nbformat.validate` OK, `ruff check .` (`0` errores), `pytest -q` (`87 passed`) y verificación de carga post-reboot en `https://tpi-eamr-grupo-atomos.streamlit.app/`.
+
+#### Sesión IA-14 · _fecha_ · _tema_ — *reservada para Emilia Mortarini*
 - Herramienta / modelo · Operador · Prompt · Qué se aceptó · Qué se rechazó y por qué · Test asociado.
