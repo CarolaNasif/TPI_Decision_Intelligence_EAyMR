@@ -96,7 +96,7 @@ flowchart LR
 
 ## ▶️ Reproducción paso a paso
 
-> **Prerrequisito:** Python **3.11** (recomendado por compatibilidad verificada con `dowhy 0.12`, `econml`, `pandas<3` y `networkx<3.5`).
+> **Prerrequisito:** Python **3.11** (recomendado por compatibilidad verificada con `dowhy` 0.12 y 0.14 —la versión fijada en `requirements.lock`—, `econml`, `pandas<3` y `networkx<3.5`).
 
 1. **Clonar el repositorio y crear el entorno virtual en Python 3.11:**
    ```bash
@@ -223,7 +223,7 @@ TPI_Decision_Intelligence_EAyMR/
 ├── tests/
 │   ├── conftest.py
 │   ├── test_causal.py                  # Validación causal con efecto verdadero conocido (-0,10) (PR #13)
-│   ├── test_causal_stack.py            # Smoke test reproducible DoWhy 0.12 + EconML
+│   ├── test_causal_stack.py            # Smoke test reproducible DoWhy + EconML
 │   ├── test_inference.py               # Pruebas Fase 1 sobre datos sintéticos y make_clean_dataset()
 │   ├── test_models.py                  # Validación anti-leakage y calibración Fase 3 (PR #12)
 │   ├── test_preprocessing.py           # Pruebas de duplicados, near-duplicates, categorías y split
