@@ -8,8 +8,8 @@
 |---|---|---|
 | 👑 Project Lead & Scrum Master (PO) | **Carola Nasif** | ☑ 2026-11-15 |
 | ⚙️ Backend & ML / Causal Engineer | **Julián Agustín Lozano** | ☑ 2026-11-15 |
-| 🎨 Frontend & UI/UX Engineer | **Emilia Mortarini** | ☐ |
-| 🔍 QA & Validation Engineer | **Emilia Mortarini** (co-auditoría cruzada con Carola Nasif) | ☐ |
+| 🎨 Frontend & UI/UX Engineer | **Emilia Mortarini** | ☑ 2026-11-15 |
+| 🔍 QA & Validation Engineer | **Emilia Mortarini** (co-auditoría cruzada con Carola Nasif) | ☑ 2026-11-15 |
 
 ---
 
@@ -104,7 +104,7 @@ El VIF observado ($1,72$ / $1,71$) es coherente con la segunda fila, que es la q
 ---
 
 ## Entrada 3 — Autopsia de Experimentos Fallidos (Data Autopsy)
-**Responsable:** Backend & ML + QA · **Estado:** 🟢 3 experimentos registrados (mínimo 2) · **revisada por QA con 3 observaciones abiertas** — Emilia Mortarini, 2026-11-14 21:40. Se verificaron contra los datos y los artefactos 22 afirmaciones falsables (todas las métricas de NB/logística/RF/RF+isotónica/CART, los α de poda, la estructura de copias, 5.630→2.982 y el churn 16,84%→17,30%): coinciden. Quedan 3 cifras a corregir por Backend & ML, detalladas en la Sesión IA-11 de la Entrada 5; ninguna invalida las conclusiones de los experimentos. **Observaciones resueltas** por Julián Agustín Lozano `[2026-11-14 21:39]` (Sesión IA-09): las 3 cifras verificadas contra el código y corregidas en el texto.
+**Responsable:** Backend & ML + QA · **Estado:** 🟢 3 experimentos registrados (mínimo 2) · **revisada por QA, 3 observaciones resueltas en el PR #21** — Emilia Mortarini, 2026-11-14 21:40. Se verificaron contra los datos y los artefactos 22 afirmaciones falsables (todas las métricas de NB/logística/RF/RF+isotónica/CART, los α de poda, la estructura de copias, 5.630→2.982 y el churn 16,84%→17,30%): coinciden. Quedan 3 cifras a corregir por Backend & ML, detalladas en la Sesión IA-11 de la Entrada 5; ninguna invalida las conclusiones de los experimentos. **Observaciones resueltas** por Julián Agustín Lozano `[2026-11-14 21:39]` (Sesión IA-09): las 3 cifras verificadas contra el código y corregidas en el texto.
 
 ### Experimento fallido #1 — Torneo predictivo "demasiado bueno": copias casi duplicadas del dataset
 `[2026-11-14 16:22] · Julián Agustín Lozano (Backend & ML)`
@@ -444,8 +444,15 @@ Efecto sobre la probabilidad de churn, en pp (negativo = el cupón retiene):
 - **Qué se aceptó / qué se rechazó:** Se aceptó abrir el PR de cierre en modo **Draft** para que Julián (citas de Fase 4 y firma) y Emilia (firma, Estado de Entrada 3, test de imports, verificación de los 3 módulos online y `Sesión IA-14`) sumen sus commits sobre la misma rama antes del veredicto QA final, respetando estrictamente la Regla de Oro del enunciado. Se rechazó mergear a `main` o crear el tag `v1.0-entrega` antes de contar con las firmas de los 3 integrantes, las slides finales en `docs/` y el `[APROBADO]` de QA.
 - **Test y verificación asociada:** `nbformat.validate` OK, `ruff check .` (`0` errores), `pytest -q` (`87 passed`) y verificación de carga post-reboot en `https://tpi-eamr-grupo-atomos.streamlit.app/`.
 
-#### Sesión IA-14 · _fecha_ · _tema_ — *reservada para Emilia Mortarini*
-- Herramienta / modelo · Operador · Prompt · Qué se aceptó · Qué se rechazó y por qué · Test asociado.
+#### Sesión IA-14 · 2026-11-15 10:00-18:10 · Quality Gate del PR #24 y cierre de QA
+- **Herramienta:** Claude Code (Claude Opus 5), con acceso al repositorio local y al navegador.
+- **Operador:** Emilia Mortarini (Frontend & UI/UX + QA & Validation Engineer).
+- **Prompts (resumen fiel):** "Quality Gate del PR #24: ruff + pytest, explicación por caso del Módulo 2, bug de `CityTier`, Sesión IA-12, y decidí como Frontend si aceptás que la app importe `src`" · "Último paso para cerrar: firmas, Estado de la Entrada 3, Sesión IA-14 y veredicto del PR #25".
+- **Qué se hizo:** veredicto `[APROBADO]` del PR #24 (`ruff` 0 errores, `pytest` 87 passed) reproduciendo las cifras del bug de `CityTier` de forma independiente (**78,7%** de los 2.982 perfiles afectados, promedio **2,7 pp**, máximo **51,8 pp**; tras `align_to_train`, diferencia exactamente 0 en los 597 de Test) y verificando los invariantes de `local_explanation` (aportes 0 para el cliente típico; `Complain` aislado +2,0 pp; en un perfil `Tenure=0` + reclamo, `Tenure` +46,5 pp y `Complain` +45,5 pp). Verificación final de los 3 módulos en `https://tpi-eamr-grupo-atomos.streamlit.app/`, firmas de Frontend y QA, y cierre de la Entrada 3.
+- **Decisión revertida sobre una propia (IA-11):** se aceptó que la app importe `src.models` y `src.preprocessing`. La razón original —no arrastrar dependencias pesadas al deploy— no se cumple: los imports **a nivel de módulo** de esos dos archivos son solo `numpy`, `pandas`, `sklearn`, `scipy` y stdlib (`statsmodels` está importado dentro de funciones), y en un venv limpio con solo `app/requirements.txt` se verificó que `statsmodels`, `dowhy`, `econml`, `pingouin`, `lightgbm`, `shap`, `matplotlib` y `seaborn` están **ausentes** y la app igual carga, predice y responde HTTP 200. Además la regla de arquitectura de `src/__init__.py` pide importar desde `src` y no duplicar lógica en `app/app.py`: la desviación era la de IA-11.
+- **Riesgo aceptado conscientemente:** esa compatibilidad depende de que nadie promueva un `import statsmodels` (o similar) al nivel de módulo de `src/models.py` o `src/preprocessing.py`. Si ocurre, el deploy se rompe y **ningún test lo detecta**, porque el entorno de desarrollo tiene todo instalado. Se prototipó un resguardo determinístico (exigir que los imports de módulo sean subconjunto de `app/requirements.txt` + stdlib, que hoy pasa) y el equipo decidió **no incorporarlo** a menos de 24 h del freeze, para no tocar la suite de tests ya verificada. Queda registrado como deuda técnica conocida.
+- **Qué se aceptó / qué se rechazó:** se rechazó firmar la Entrada 3 como revisión limpia mientras las 3 observaciones seguían abiertas (se firmó recién tras verificar su resolución en el PR #23). Se rechazó también dar por buena la verificación ajena del punto anterior: se repitió el chequeo de dependencias de forma independiente, estática y dinámica, antes de revertir la decisión propia.
+- **Test y verificación asociada:** `ruff check .` sin errores · `pytest -q` **87 passed, 0 skipped** · venv limpio con solo `app/requirements.txt` (`streamlit run app/app.py` → HTTP 200) · verificación E2E en producción de los 3 módulos.
 
 #### Sesión IA-15 · 2026-11-15 12:10-17:45 · Slides de la defensa (Beamer), revisión por rol contra el enunciado, citas de Fase 4 y firma de Backend & ML
 - **Herramienta:** Claude Code (Claude Opus 5.5 al inicio y Claude Fable 5.2 después), con acceso al repositorio local.
