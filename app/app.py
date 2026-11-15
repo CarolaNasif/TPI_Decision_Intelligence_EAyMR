@@ -1,7 +1,8 @@
 """Decision Intelligence Capstone - Web App (Streamlit).
 
 Dueño: Frontend & UI/UX Engineer. La app SOLO consume artefactos serializados en
-/artifacts (joblib/json/parquet) generados por `src/` vía el notebook maestro.
+/artifacts (joblib/json/parquet) generados por `src/` vía el notebook maestro, más funciones
+puras de `src/models.py` (alinear tipos y explicar una predicción) que no re-entrenan nada.
 Nunca re-entrena ni importa econml/dowhy.
 
 Ejecutar localmente:  streamlit run app/app.py
@@ -10,6 +11,7 @@ Ejecutar localmente:  streamlit run app/app.py
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import joblib
@@ -18,6 +20,12 @@ import plotly.graph_objects as go
 import streamlit as st
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:  # `streamlit run app/app.py` solo agrega app/ al path
+    sys.path.insert(0, str(ROOT))
+
+from src import models as mdl  # noqa: E402  (funciones puras: no re-entrena nada)
+from src import preprocessing as prep  # noqa: E402
+
 ARTIFACTS = ROOT / "artifacts"
 DATASET = ROOT / "data" / "processed" / "dataset_clean.parquet"
 
@@ -84,6 +92,13 @@ def load_dataset() -> pd.DataFrame:
 @st.cache_data
 def load_split_idx() -> dict:
     return json.loads((ARTIFACTS / "split_idx.json").read_text(encoding="utf-8"))
+
+
+@st.cache_data
+def load_train_features() -> pd.DataFrame:
+    """X_train del split oficial: da los tipos de las columnas y el cliente típico (sin Test)."""
+    X_train, _, _, _ = prep.load_split(load_dataset())
+    return X_train[mdl.FEATURES]
 
 
 @st.cache_data
@@ -345,7 +360,10 @@ with tab_pred:
 
     with col_result:
         if predict_clicked:
-            X_new = pd.DataFrame([inputs])[numeric_feats + categorical_feats]
+            X_train = load_train_features()
+            # El formulario devuelve categorías como texto (CityTier "1"); el modelo se entrenó con
+            # los tipos de Train. Sin alinear, el OneHotEncoder ignora la categoría en silencio.
+            X_new = mdl.align_to_train(pd.DataFrame([inputs]), X_train, numeric_feats + categorical_feats)
             proba = float(model.predict_proba(X_new)[:, 1][0])
             st.metric("Probabilidad calibrada de churn", f"{proba:.1%}")
             fig_gauge = go.Figure(
@@ -380,6 +398,60 @@ with tab_pred:
             best_row[["modelo", "roc_auc", "pr_auc", "brier", "ece", "f1"]].round(4),
             hide_index=True,
             use_container_width=True,
+        )
+
+    if predict_clicked:
+        st.markdown("---")
+        st.markdown("**¿Por qué esta probabilidad? — explicación para este cliente**")
+        reference = mdl.train_reference_profile(X_train, numeric_feats + categorical_feats)
+        explanation = mdl.local_explanation(model, X_new, reference)
+        typical = mdl.align_to_train(reference.to_frame().T, X_train, list(reference.index))
+        p_typical = float(model.predict_proba(typical)[:, 1][0])
+        top = explanation[explanation["aporte"].abs() > 1e-9].head(8).iloc[::-1]
+        if top.empty:
+            st.info(
+                "Ninguna variable, cambiada de a una a su valor típico, mueve la probabilidad "
+                "de este cliente."
+            )
+        else:
+            def fmt(v) -> str:
+                if isinstance(v, float) and v.is_integer():
+                    return str(int(v))
+                return "s/d" if pd.isna(v) else str(v)
+
+            labels = [
+                f"{r.variable}: {fmt(r.valor_cliente)} (típ. {fmt(r.valor_tipico)})"
+                for r in top.itertuples()
+            ]
+            fig_local = go.Figure(
+                go.Bar(
+                    x=top["aporte"] * 100,
+                    y=labels,
+                    orientation="h",
+                    marker_color=["#c0392b" if a > 0 else "#2e9e5b" for a in top["aporte"]],
+                    text=[f"{a * 100:+.1f} pp" for a in top["aporte"]],
+                    textposition="outside",
+                    cliponaxis=False,
+                )
+            )
+            span = float(top["aporte"].abs().max() * 100)
+            fig_local.update_layout(
+                height=60 + 40 * len(top),
+                margin={"t": 10, "b": 30, "l": 10, "r": 10},
+                xaxis={
+                    "title": "Aporte a la probabilidad de churn (pp)",
+                    "range": [-1.35 * span, 1.35 * span],
+                    "zeroline": True,
+                },
+            )
+            st.plotly_chart(fig_local, use_container_width=True)
+        st.caption(
+            f"Método: cada variable se reemplaza, de a una, por su valor en el **cliente típico de Train** "
+            f"(mediana en numéricas, moda en categóricas; probabilidad del típico = {p_typical:.1%}). "
+            "El aporte es cuánto cambia la probabilidad: rojo = ese valor **sube** el riesgo de este "
+            "cliente, verde = lo **baja**. Es una explicación local (no SHAP): no reparte interacciones, "
+            "y como la calibración isotónica es escalonada, cambios chicos pueden dar aporte 0. "
+            "Es asociación predictiva, no efecto causal (eso es el módulo 3)."
         )
 
     st.markdown("---")
