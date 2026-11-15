@@ -104,7 +104,7 @@ El VIF observado ($1,72$ / $1,71$) es coherente con la segunda fila, que es la q
 ---
 
 ## Entrada 3 — Autopsia de Experimentos Fallidos (Data Autopsy)
-**Responsable:** Backend & ML + QA · **Estado:** 🟢 3 experimentos registrados (mínimo 2) · pendiente revisión QA
+**Responsable:** Backend & ML + QA · **Estado:** 🟢 3 experimentos registrados (mínimo 2) · **revisada por QA con 3 observaciones abiertas** — Emilia Mortarini, 2026-11-14 21:40. Se verificaron contra los datos y los artefactos 22 afirmaciones falsables (todas las métricas de NB/logística/RF/RF+isotónica/CART, los α de poda, la estructura de copias, 5.630→2.982 y el churn 16,84%→17,30%): coinciden. Quedan 3 cifras a corregir por Backend & ML, detalladas en la Sesión IA-11 de la Entrada 5; ninguna invalida las conclusiones de los experimentos.
 
 ### Experimento fallido #1 — Torneo predictivo "demasiado bueno": copias casi duplicadas del dataset
 `[2026-11-14 16:22] · Julián Agustín Lozano (Backend & ML)`
@@ -349,5 +349,27 @@ Efecto sobre la probabilidad de churn, en pp (negativo = el cupón retiene):
 - **Test asociado:** `tests/test_fase2.py` (9 tests) + `tests/test_quality_gate.py` (sin cambios, sigue en verde).
 - **Actualización `[2026-11-14 21:10]` · corrección de una comparación inválida (detectada en revisión del equipo):** la redacción original del hallazgo 1 contrastaba $r=0,73$ contra un VIF de 1,7–1,8 **calculados sobre muestras distintas**. El $r$ salía de `pandas.corr()`, que borra NA de a pares (N=2.164), mientras que el VIF se calcula sobre la muestra imputada por mediana (N=2.385). Verificado y corregido: sobre la muestra imputada $r=0,632$ y la cota $1/(1-r^2)\approx1,66$ es consistente con el VIF observado (1,72 / 1,71). La conclusión de fondo no cambia (no hay multicolinealidad problemática: aun con $r=0,731$ la cota sería 2,15 < 5), pero la comparación ahora es sobre una sola muestra. Se corrigió en Entrada 2 (fila 10 y §2.2), en este hallazgo 1 y en `notebooks/borradores/fase2.ipynb`.
 
-#### Sesión IA-09 · _fecha_ · _tema_
+#### Sesión IA-09 · _fecha_ · _tema_ — *reservada para Julián Agustín Lozano*
+- Herramienta / modelo · Operador · Prompt · Qué se aceptó · Qué se rechazó y por qué · Test asociado.
+
+#### Sesión IA-10 · _fecha_ · _tema_ — *reservada para Carola Nasif*
+- Herramienta / modelo · Operador · Prompt · Qué se aceptó · Qué se rechazó y por qué · Test asociado.
+
+#### Sesión IA-11 · 2026-11-14 21:40 · Módulo 1 de la app, `requirements.lock` y revisión QA de la Entrada 3
+- **Herramienta:** Claude Code (Claude Opus 5), con acceso al repositorio local.
+- **Operador:** Emilia Mortarini (Frontend & UI/UX + QA & Validation Engineer).
+- **Prompt (resumen fiel):** "Después del merge de #17, en rama nueva desde main: implementar el Módulo 1 de la app (filtros, inspección de variables con faltantes, proyección PC1-PC2 con `artifacts/pca.joblib` distinguiendo Train/Test, varianza explicada y loadings), mostrando fuente, licencia y que es la versión limpia del dataset; la app sigue sin importar `src/` ni `econml`/`dowhy`. Verificar en un venv limpio con solo `app/requirements.txt`. Además: generar `requirements.lock` desde un venv limpio con `pytest` en verde, y marcar como revisada la Entrada 3 tocando solo su línea de Estado."
+- **Qué se hizo:**
+  - `app/app.py`, Módulo 1: filtros (Churn, `CityTier`, `PreferedOrderCat`, rango de `Tenure`), histograma/barras por `Churn` de cualquier variable, tabla de faltantes de la selección, y proyección PC1-PC2 coloreada por `Churn` distinguiendo Train (círculo) de Test (cruz), con varianza explicada y loadings de PC1/PC2 nombrados en lenguaje de negocio.
+  - `data/processed/dataset_clean.parquet` (68 KB, N = 2.982) versionado por decisión del equipo; la app muestra en pantalla la fuente (Ankit Verma, Kaggle), la licencia CC BY-NC-SA 4.0 y que es la versión depurada.
+  - `requirements.lock`: 163 paquetes congelados desde un venv limpio de Python 3.11 creado solo con `requirements.txt`, con `pytest -q` en verde (83 passed) antes del `pip freeze`.
+- **Decisión de diseño:** la app no importa `src`. Las 12 columnas numéricas se leen de `pipeline.feature_names_in_` del propio `pca.joblib` y la partición de `artifacts/split_idx.json`, así que el contrato queda autodescrito por los artefactos y la app no arrastra `statsmodels`/`dowhy`/`econml`.
+- **Revisión QA de la Entrada 3 (3 observaciones para Backend & ML).** Se verificaron 22 afirmaciones falsables contra los datos y `model_results.json`; coinciden todas salvo:
+  1. **Exp. #1, conteo de columnas perturbadas:** la Entrada dice `CouponUsed` 1.469, `MaritalStatus` 827 y `SatisfactionScore` 568; el código commiteado (`near_duplicate_copies`) da **1.472 / 830 / 572**. Verificado con categorías crudas, normalizadas y sin duplicados exactos: el resultado no cambia. No afecta la conclusión (`CouponUsed` sigue siendo la más perturbada por amplio margen).
+  2. **Exp. #1, "entre filas no emparejadas coinciden 0-10":** el máximo real es **11**. El argumento de fondo (hueco limpio entre ≤11 y ≥14, sin casos intermedios) se sostiene.
+  3. **Exp. #2, el Spearman 0,58:** la cifra es correcta pero **corresponde solo a `Churn=1`** (0,5802 en Train); en `Churn=0` ese mismo par `OrderCount`–`DaySinceLastOrder` da **0,4425**. Como la frase abre con "Dentro de cada clase" y los dos valores anteriores sí llevan etiqueta, se lee como si valiera en ambas. Conviene etiquetarla. El diagnóstico contra Naive Bayes no cambia: 0,44 también viola la independencia condicional.
+- **Qué se aceptó / qué se rechazó:** Se aceptó versionar el dataset procesado una vez confirmada la licencia CC BY-NC-SA 4.0 contra la fuente (ver IA-08 y la auditoría del README). Se rechazó firmar la Entrada 3 como revisión limpia conociendo las 3 discrepancias: queda como "revisada con observaciones" hasta que Backend & ML las corrija. También se rechazó editar el texto de los experimentos, para no colisionar con las ediciones en curso de Julián en las Entradas 2, 4 y 5.
+- **Test y verificación asociada:** venv limpio con solo `app/requirements.txt` (`scikit-learn==1.5.2`): `pca.joblib` carga y proyecta 2.982 clientes (Train 2.385 / Test 597), `best_model.joblib` reproduce `predict_proba = 0.544762`, `causal_results.json`/`dag.dot`/`cate_grid.parquet` cargan, y `streamlit run app/app.py` responde HTTP 200 sin `ModuleNotFoundError`. `ruff check .` y `pytest -q` en verde.
+
+#### Sesión IA-12 · _fecha_ · _tema_
 - Herramienta / modelo · Operador · Prompt · Qué se aceptó · Qué se rechazó y por qué · Test asociado.

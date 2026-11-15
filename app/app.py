@@ -17,7 +17,15 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-ARTIFACTS = Path(__file__).resolve().parents[1] / "artifacts"
+ROOT = Path(__file__).resolve().parents[1]
+ARTIFACTS = ROOT / "artifacts"
+DATASET = ROOT / "data" / "processed" / "dataset_clean.parquet"
+
+# Nombres de negocio de las componentes, interpretados en Fase 2 (BITACORA.md, Entrada 2 §2.2).
+PC_LABELS = {
+    "PC1": "intensidad transaccional",
+    "PC2": "antigüedad vs. uso multi-dispositivo",
+}
 
 # Rangos indicativos del formulario (observados en el dataset limpio, N=2.982).
 NUMERIC_RANGES: dict[str, tuple[float, float, float]] = {
@@ -68,6 +76,45 @@ def load_pca_pipeline():
     return joblib.load(path) if path.exists() else None
 
 
+@st.cache_data
+def load_dataset() -> pd.DataFrame:
+    return pd.read_parquet(DATASET)
+
+
+@st.cache_data
+def load_split_idx() -> dict:
+    return json.loads((ARTIFACTS / "split_idx.json").read_text(encoding="utf-8"))
+
+
+@st.cache_data
+def pca_scores() -> pd.DataFrame:
+    """Proyecta TODO el dataset sobre la PCA ajustada SOLO en Train (Test va 'a ciegas')."""
+    pipeline = load_pca_pipeline()
+    df = load_dataset()
+    split = load_split_idx()
+    numeric_cols = list(pipeline.feature_names_in_)
+    scores = pipeline.transform(df[numeric_cols])
+    out = df[[split["id_col"], "Churn"]].copy()
+    out["PC1"] = scores[:, 0]
+    out["PC2"] = scores[:, 1]
+    train_ids = set(split["train"])
+    out["particion"] = [
+        "Train" if cid in train_ids else "Test" for cid in out[split["id_col"]]
+    ]
+    return out
+
+
+@st.cache_data
+def pca_loadings() -> pd.DataFrame:
+    pipeline = load_pca_pipeline()
+    pca = pipeline.named_steps["pca"]
+    return pd.DataFrame(
+        pca.components_[:2].T,
+        index=list(pipeline.feature_names_in_),
+        columns=["PC1", "PC2"],
+    )
+
+
 st.set_page_config(page_title="Decision Intelligence Capstone", page_icon="🧭", layout="wide")
 st.title("🧭 Decision Intelligence Capstone — Retorno causal del motor de recomendaciones")
 st.caption("EAyMR 2026 · UCA · P(Y | X) vs P(Y | do(T = t))")
@@ -91,14 +138,186 @@ tab_diag, tab_pred, tab_causal = st.tabs(
 # --------------------------------------------------------------------------- Módulo 1
 with tab_diag:
     st.subheader("Diagnóstico y exploración")
-    pca_pipeline = load_pca_pipeline()
-    if pca_pipeline is None:
-        st.warning(
-            "Pendiente: requiere `artifacts/pca.joblib` (PR #17, Fase 2) y la decisión del equipo "
-            "sobre si se puede subir una muestra del dataset al repo para este módulo (licencia Kaggle)."
+    KAGGLE_URL = (
+        "https://www.kaggle.com/datasets/"
+        "ankitverma2010/ecommerce-customer-churn-analysis-and-prediction"
+    )
+    LICENCIA_URL = "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+    st.caption(
+        f"Fuente: **E-Commerce Customer Churn** de Ankit Verma ([Kaggle]({KAGGLE_URL})) · "
+        f"Licencia [CC BY-NC-SA 4.0]({LICENCIA_URL}) (uso académico, no comercial) · "
+        "Se muestra la **versión limpia** (N = 2.982): se eliminaron 2.638 copias casi duplicadas "
+        "(`CustomerID` + 1470) y 10 duplicados exactos, ver BITACORA.md Entrada 3."
+    )
+
+    df_full = load_dataset()
+    split_idx = load_split_idx()
+    id_col = split_idx["id_col"]
+
+    st.markdown("#### Filtros de la muestra")
+    f1, f2, f3, f4 = st.columns(4)
+    with f1:
+        churn_sel = st.radio("Churn", ["Todos", "Solo churn", "Solo retenidos"], index=0)
+    with f2:
+        city_sel = st.multiselect(
+            "CityTier", sorted(df_full["CityTier"].astype(str).unique()), default=[]
         )
+    with f3:
+        cat_sel = st.multiselect(
+            "PreferedOrderCat", sorted(df_full["PreferedOrderCat"].astype(str).unique()), default=[]
+        )
+    with f4:
+        t_min, t_max = int(df_full["Tenure"].min()), int(df_full["Tenure"].max())
+        tenure_sel = st.slider("Tenure (meses)", t_min, t_max, (t_min, t_max))
+
+    mask = pd.Series(True, index=df_full.index)
+    if churn_sel == "Solo churn":
+        mask &= df_full["Churn"] == 1
+    elif churn_sel == "Solo retenidos":
+        mask &= df_full["Churn"] == 0
+    if city_sel:
+        mask &= df_full["CityTier"].astype(str).isin(city_sel)
+    if cat_sel:
+        mask &= df_full["PreferedOrderCat"].astype(str).isin(cat_sel)
+    # Tenure tiene NA: se conservan salvo que el usuario recorte el rango.
+    in_range = df_full["Tenure"].between(tenure_sel[0], tenure_sel[1])
+    if (tenure_sel[0], tenure_sel[1]) != (t_min, t_max):
+        mask &= in_range.fillna(False)
+    df_sel = df_full[mask]
+
+    c_a, c_b, c_c = st.columns(3)
+    c_a.metric("Clientes seleccionados", f"{len(df_sel):,}".replace(",", "."))
+    c_b.metric("Tasa de churn", f"{df_sel['Churn'].mean():.1%}" if len(df_sel) else "—")
+    c_c.metric("Sobre el total", f"{len(df_sel) / len(df_full):.0%}")
+
+    if df_sel.empty:
+        st.warning("Ningún cliente cumple los filtros. Ampliá la selección.")
     else:
-        st.success("`artifacts/pca.joblib` disponible. Módulo de biplot pendiente de datos reales.")
+        st.markdown("---")
+        st.markdown("#### Inspección de variables")
+        col_var, col_na = st.columns([1.3, 1])
+
+        with col_var:
+            numeric_cols = list(load_pca_pipeline().feature_names_in_)
+            categorical_cols = [
+                c for c in df_full.columns
+                if c not in numeric_cols and c not in {id_col, "Churn", "coupon_any"}
+            ]
+            var = st.selectbox("Variable", numeric_cols + categorical_cols)
+            fig_var = go.Figure()
+            if var in numeric_cols:
+                for churn_val, color, name in [(0, "#6a8caf", "Retenido"), (1, "#b23a48", "Churn")]:
+                    serie = df_sel.loc[df_sel["Churn"] == churn_val, var].dropna()
+                    fig_var.add_trace(
+                        go.Histogram(x=serie, name=name, marker_color=color, opacity=0.65, nbinsx=30)
+                    )
+                fig_var.update_layout(barmode="overlay", yaxis_title="Clientes", xaxis_title=var)
+            else:
+                tab = (
+                    df_sel.groupby([df_sel[var].astype(str), "Churn"]).size().unstack(fill_value=0)
+                )
+                for churn_val, color, name in [(0, "#6a8caf", "Retenido"), (1, "#b23a48", "Churn")]:
+                    if churn_val in tab.columns:
+                        fig_var.add_trace(
+                            go.Bar(x=tab.index, y=tab[churn_val], name=name, marker_color=color)
+                        )
+                fig_var.update_layout(barmode="group", yaxis_title="Clientes", xaxis_title=var)
+            fig_var.update_layout(
+                height=330, title=f"{var} según Churn", legend={"orientation": "h", "y": 1.15},
+                margin={"t": 60},
+            )
+            st.plotly_chart(fig_var, use_container_width=True)
+
+        with col_na:
+            na = (
+                df_sel.drop(columns=[id_col])
+                .isna()
+                .sum()
+                .rename("n_faltantes")
+                .to_frame()
+                .assign(pct=lambda d: (d["n_faltantes"] / len(df_sel) * 100).round(2))
+                .query("n_faltantes > 0")
+                .sort_values("n_faltantes", ascending=False)
+            )
+            st.markdown("**Faltantes en la selección**")
+            if na.empty:
+                st.info("Sin faltantes en la selección actual.")
+            else:
+                st.dataframe(na, use_container_width=True)
+                st.caption(
+                    "Mecanismo MAR (no MCAR): el test de Little rechaza y el indicador de NA es "
+                    "predecible desde el resto (ver BITACORA.md, Entrada 2, fila 2). Por eso la "
+                    "imputación va con indicador binario y **dentro** del Pipeline, ajustada solo en Train."
+                )
+
+        st.markdown("---")
+        st.markdown("#### Proyección PCA (PC1-PC2)")
+        pipeline = load_pca_pipeline()
+        evr = pipeline.named_steps["pca"].explained_variance_ratio_
+        st.caption(
+            f"`artifacts/pca.joblib` = `SimpleImputer(mediana) → StandardScaler → PCA`, **ajustado solo "
+            f"con Train** (2.385 clientes); a Test se le aplica `.transform()` a ciegas. "
+            f"PC1 explica {evr[0]:.1%} de la varianza y PC2 {evr[1]:.1%} "
+            f"({evr[0] + evr[1]:.1%} acumulado)."
+        )
+
+        scores = pca_scores()
+        scores_sel = scores[scores[id_col].isin(df_sel[id_col])]
+        mostrar_particion = st.checkbox("Distinguir Train / Test", value=True)
+
+        fig_pca = go.Figure()
+        for churn_val, color, name in [(0, "#6a8caf", "Retenido"), (1, "#b23a48", "Churn")]:
+            for particion, symbol in [("Train", "circle"), ("Test", "x")]:
+                sub = scores_sel[(scores_sel["Churn"] == churn_val)]
+                if mostrar_particion:
+                    sub = sub[sub["particion"] == particion]
+                elif particion == "Test":
+                    continue
+                if sub.empty:
+                    continue
+                etiqueta = f"{name} · {particion}" if mostrar_particion else name
+                fig_pca.add_trace(
+                    go.Scatter(
+                        x=sub["PC1"], y=sub["PC2"], mode="markers", name=etiqueta,
+                        marker={"color": color, "size": 6, "opacity": 0.5, "symbol": symbol},
+                    )
+                )
+        fig_pca.add_hline(y=0, line_color="lightgrey", line_width=1)
+        fig_pca.add_vline(x=0, line_color="lightgrey", line_width=1)
+        fig_pca.update_layout(
+            height=480,
+            xaxis_title=f"PC1 — {PC_LABELS['PC1']} ({evr[0]:.1%})",
+            yaxis_title=f"PC2 — {PC_LABELS['PC2']} ({evr[1]:.1%})",
+            legend={"orientation": "h", "y": -0.18},
+            margin={"t": 30},
+        )
+        st.plotly_chart(fig_pca, use_container_width=True)
+
+        load_df = pca_loadings()
+        col_l1, col_l2 = st.columns(2)
+        for col, pc in [(col_l1, "PC1"), (col_l2, "PC2")]:
+            with col:
+                top = load_df[pc].reindex(load_df[pc].abs().sort_values(ascending=False).index).head(5)
+                fig_l = go.Figure(
+                    go.Bar(
+                        x=top.to_numpy(), y=top.index, orientation="h",
+                        marker_color=["#b23a48" if v < 0 else "#2e6f95" for v in top],
+                    )
+                )
+                fig_l.update_layout(
+                    height=260, title=f"{pc} — {PC_LABELS[pc]}", xaxis_title="carga",
+                    yaxis={"autorange": "reversed"}, margin={"t": 50},
+                )
+                st.plotly_chart(fig_l, use_container_width=True)
+
+        st.caption(
+            "**Lectura:** PC1 junta con el mismo signo a `OrderCount`, `CouponUsed`, `CashbackAmount` y "
+            "`DaySinceLastOrder`: es un eje de *cuánto transacciona* el cliente. PC2 opone `Tenure` (+) a "
+            "`HourSpendOnApp` y `NumberOfDeviceRegistered` (−): separa a los clientes antiguos de los de "
+            "uso intensivo multi-dispositivo. No se observa una separación limpia de Churn en este plano "
+            "(los dos colores se superponen): la PCA acá es descriptiva, no un clasificador — para predecir "
+            "se usan las 12 variables originales en el Módulo 2."
+        )
 
 # --------------------------------------------------------------------------- Módulo 2 — What-Is
 with tab_pred:
