@@ -129,7 +129,7 @@ def near_duplicate_copies(
     en al menos `min_equal` columnas (NA = NA cuenta como coincidencia). Se conserva el ID más bajo.
 
     En el archivo original hay 2.638 pares así (14-19 de 19 columnas iguales, mismo Churn en el
-    100% de los pares); entre filas no emparejadas coinciden 0-10 columnas, sin casos intermedios.
+    100% de los pares); entre filas no emparejadas coinciden 0-11 columnas, sin casos en 12-13.
     """
     id_col = ID_COLS[0]
     cols = [c for c in df.columns if c not in ID_COLS]
