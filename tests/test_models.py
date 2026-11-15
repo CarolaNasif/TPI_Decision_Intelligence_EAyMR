@@ -132,3 +132,55 @@ def test_saved_artifacts_are_consistent():
         _, X_te, _, _ = prep.load_split(df)
         proba = model.predict_proba(X_te[mdl.FEATURES])[:, 1]
         assert ((proba >= 0) & (proba <= 1)).all()
+
+
+# --------------------------------------------------------------------------- explicación local (módulo 2)
+def test_align_to_train_restores_category_types(data, rf):
+    """Una categoría con otro tipo ("1" vs 1) no debe codificarse como todo-ceros."""
+    X_tr, X_te, _, _ = data
+    pipe = rf.best_estimator_
+    row = X_te[mdl.FEATURES].iloc[[0]]
+    as_text = row.astype({"CityTier": str})
+    pre = pipe.named_steps["pre"]
+    assert not np.allclose(pre.transform(as_text), pre.transform(row))  # el error que se corrige
+    aligned = mdl.align_to_train(as_text, X_tr)
+    assert np.allclose(pre.transform(aligned), pre.transform(row))
+    assert pipe.predict_proba(aligned)[0, 1] == pytest.approx(pipe.predict_proba(row)[0, 1])
+
+
+def test_reference_profile_is_train_median_and_mode(data):
+    X_tr, _, _, _ = data
+    ref = mdl.train_reference_profile(X_tr)
+    assert list(ref.index) == mdl.FEATURES
+    assert ref["Tenure"] == pytest.approx(X_tr["Tenure"].median())
+    assert ref["Gender"] == X_tr["Gender"].mode().iloc[0]
+
+
+def test_local_explanation_contributions(data, rf):
+    X_tr, X_te, _, _ = data
+    pipe = rf.best_estimator_
+    ref = mdl.train_reference_profile(X_tr)
+    row = mdl.align_to_train(X_te.iloc[[3]], X_tr)
+    table = mdl.local_explanation(pipe, row, ref)
+    assert set(table.variable) == set(mdl.FEATURES)
+    assert table.attrs["proba"] == pytest.approx(pipe.predict_proba(row)[0, 1])
+    assert np.allclose(table.aporte, table.attrs["proba"] - table.proba_con_tipico)
+    assert (table.aporte.abs().diff().dropna() <= 1e-12).all()  # ordenada por |aporte|
+    typical = mdl.align_to_train(ref.to_frame().T, X_tr)
+    assert np.allclose(mdl.local_explanation(pipe, typical, ref).aporte, 0)  # el típico no se aparta
+
+
+@pytest.mark.skipif(not mdl.BEST_MODEL_PATH.exists(), reason="artifacts/best_model.joblib aún no generado")
+def test_app_inputs_reproduce_model_predictions_on_real_artifact():
+    """Regresión del bug del módulo 2: CityTier llegaba como texto desde el formulario."""
+    import joblib
+
+    if not (prep.PROJECT_ROOT / "data" / "processed" / "dataset_clean.parquet").exists():
+        pytest.skip("dataset limpio no disponible")
+    df = pd.read_parquet(prep.PROJECT_ROOT / "data" / "processed" / "dataset_clean.parquet")
+    X_tr, X_te, _, _ = prep.load_split(df)
+    model = joblib.load(mdl.BEST_MODEL_PATH)
+    as_form = X_te[mdl.FEATURES].astype({"CityTier": str})
+    as_form = as_form.astype({c: object for c in mdl.FEATURE_CATEGORICAL})  # como llega del formulario
+    expected = model.predict_proba(X_te[mdl.FEATURES])[:, 1]
+    assert np.allclose(model.predict_proba(mdl.align_to_train(as_form, X_tr))[:, 1], expected)

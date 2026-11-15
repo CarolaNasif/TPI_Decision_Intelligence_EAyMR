@@ -426,6 +426,70 @@ def mdi_noise_experiment(rf_pipeline: Pipeline, X_train, y_train, X_test, y_test
     return importance_mdi_vs_permutation(pipe, Xte, y_test, features=feats)
 
 
+# --------------------------------------------------------------------------- explicación local
+def align_to_train(X_new: pd.DataFrame, X_train: pd.DataFrame, features=None) -> pd.DataFrame:
+    """Castea cada columna de X_new al dtype que tenía en Train.
+
+    El OneHotEncoder usa `handle_unknown="ignore"`: si una categoría llega con otro tipo
+    (p. ej. CityTier "1" en vez de 1) no falla, la codifica como todo-ceros y la predicción
+    cambia en silencio. Alinear tipos antes de predecir evita ese error.
+    """
+    features = FEATURES if features is None else features
+    numeric, categorical = _split_types(features)
+    out = X_new[features].copy()
+    for col in numeric:
+        out[col] = pd.to_numeric(out[col]).astype(float)  # sin truncar medianas x,5
+    for col in categorical:
+        dtype = X_train[col].dtype
+        if isinstance(dtype, pd.CategoricalDtype):
+            cats = dtype.categories
+            out[col] = pd.Categorical(out[col].astype(cats.dtype), categories=cats)
+        else:
+            out[col] = out[col].astype(dtype)
+    return out
+
+
+def train_reference_profile(X_train: pd.DataFrame, features=None) -> pd.Series:
+    """Cliente típico de Train: mediana en numéricas y moda en categóricas (sin mirar Test)."""
+    features = FEATURES if features is None else features
+    numeric, categorical = _split_types(features)
+    ref = {c: X_train[c].median() for c in numeric}
+    ref.update({c: X_train[c].mode(dropna=True).iloc[0] for c in categorical})
+    return pd.Series(ref)[features]
+
+
+def local_explanation(model, x_row: pd.DataFrame, reference: pd.Series) -> pd.DataFrame:
+    """Explicación de UNA predicción por sustitución de a una variable.
+
+    Para cada variable j se reemplaza su valor por el del cliente típico de Train y se
+    recalcula la probabilidad: `aporte_j = p(x) - p(x con x_j típico)`. Un aporte positivo
+    indica que el valor de ese cliente en j le SUBE el riesgo respecto de un valor típico.
+
+    Es una explicación local, no SHAP: no reparte interacciones, así que los aportes no suman
+    exactamente `p(x) - p(típico)`. Todas las variantes se predicen en una sola llamada.
+    """
+    features = list(reference.index)
+    x_row = x_row[features].iloc[[0]]
+    base = x_row.iloc[0].to_dict()
+    rows = [base] + [{**base, col: reference[col]} for col in features]
+    # x_row ya viene alineado a Train: se reutilizan sus dtypes para las variantes.
+    variants = align_to_train(pd.DataFrame(rows), x_row, features)
+    proba = model.predict_proba(variants)[:, 1]
+    p = float(proba[0])
+    table = pd.DataFrame(
+        {
+            "variable": features,
+            "valor_cliente": [x_row[c].iloc[0] for c in features],
+            "valor_tipico": [reference[c] for c in features],
+            "proba_con_tipico": proba[1:],
+            "aporte": p - proba[1:],
+        }
+    )
+    table.attrs["proba"] = p
+    order = table["aporte"].abs().sort_values(ascending=False, kind="stable").index
+    return table.loc[order].reset_index(drop=True)
+
+
 # --------------------------------------------------------------------------- torneo completo
 def run_tournament(df: pd.DataFrame | None = None, rf_iter: int = 25) -> dict:
     """Corre las 4 familias con CV en Train, elige por CV y evalúa en Test una sola vez."""
