@@ -225,20 +225,6 @@ def test_missingness_report_detects_mar_and_little_mcar():
     assert rep.attrs["little_mcar"]["p_value"] < 0.05
 
 
-# --------------------------------------------------------------------------- Fronteras de rol (Fase 2)
-def test_fase2_functions_remain_not_implemented_for_qa():
-    with pytest.raises(NotImplementedError):
-        prep.fit_pca_train_only(pd.DataFrame({"a": [1.0, 2.0]}))
-    with pytest.raises(NotImplementedError):
-        inf.fit_ols(pd.DataFrame({"y": [1.0, 2.0], "x": [1.0, 2.0]}), "y ~ x")
-    with pytest.raises(NotImplementedError):
-        inf.gauss_markov_diagnostics(None)
-    with pytest.raises(NotImplementedError):
-        inf.influence_diagnostics(None)
-    with pytest.raises(NotImplementedError):
-        inf.vif_table(pd.DataFrame({"a": [1.0, 2.0]}))
-
-
 # --------------------------------------------------------------------------- Integración dataset real
 @pytest.mark.skipif(not prep.RAW_PATH.exists(), reason="data/raw/E Commerce Dataset.xlsx no descargado")
 def test_real_dataset_fase1_integration():

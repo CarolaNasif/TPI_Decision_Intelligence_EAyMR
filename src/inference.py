@@ -573,21 +573,165 @@ def posthoc(
     return out
 
 
-def fit_ols(df, formula: str):
-    """MCO con statsmodels (R², R² aj., F, t-tests) + versión con errores HC3. TODO."""
-    raise NotImplementedError
+def fit_ols(df: pd.DataFrame, formula: str, robust: str | None = None):
+    """MCO de referencia con statsmodels (fórmula de Wilkinson/patsy).
+
+    Se ajusta sobre `df` tal cual se le pase (en el notebook, siempre sobre Train).
+    `robust`: None para errores clásicos, o "HC0"/"HC1"/"HC2"/"HC3" para errores
+    robustos a heterocedasticidad (cuando Breusch-Pagan/White rechazan homocedasticidad).
+    Expone R², R² ajustado, F global y p vía los atributos estándar del resultado
+    (`.rsquared`, `.rsquared_adj`, `.fvalue`, `.f_pvalue`); ver `ols_coef_table` para
+    la tabla de beta/t/p/IC por coeficiente.
+    """
+    import statsmodels.formula.api as smf
+
+    model = smf.ols(formula, data=df)
+    return model.fit(cov_type=robust) if robust else model.fit()
 
 
-def gauss_markov_diagnostics(ols_result):
-    """Breusch-Pagan, White, Jarque-Bera, Durbin-Watson. TODO."""
-    raise NotImplementedError
+def ols_coef_table(ols_result, alpha: float = 0.05) -> pd.DataFrame:
+    """Tabla de coeficientes del MCO: beta, error estándar, t, p exacto e IC (1-alpha)."""
+    ci = ols_result.conf_int(alpha=alpha)
+    ci.columns = ["ci_low", "ci_high"]
+    pvalues = ols_result.pvalues.to_numpy()
+    return pd.DataFrame(
+        {
+            "term": ols_result.params.index,
+            "coef": ols_result.params.to_numpy(),
+            "std_err": ols_result.bse.to_numpy(),
+            "t": ols_result.tvalues.to_numpy(),
+            "p_value": pvalues,
+            "ci_low": ci["ci_low"].to_numpy(),
+            "ci_high": ci["ci_high"].to_numpy(),
+            "decision": [_decision_text(float(p), alpha) for p in pvalues],
+        }
+    )
 
 
-def influence_diagnostics(ols_result):
-    """Residuos estudentizados externos (|r|>3), leverage (h>2(p+1)/n), Cook (D>4/n, D>0.5). TODO."""
-    raise NotImplementedError
+def gauss_markov_diagnostics(ols_result, alpha: float = 0.05) -> dict[str, Any]:
+    """Auditoría de supuestos de Gauss-Markov sobre un resultado de `fit_ols`.
+
+    - Homocedasticidad: Breusch-Pagan y White.
+    - Normalidad de residuos: Jarque-Bera (mismo caveat de N grande que Shapiro) + datos de Q-Q.
+    - Independencia: Durbin-Watson, informativo (sin orden temporal/espacial en datos transversales).
+    """
+    from statsmodels.stats.diagnostic import het_breuschpagan, het_white
+    from statsmodels.stats.stattools import durbin_watson, jarque_bera
+
+    resid = np.asarray(ols_result.resid, dtype=float)
+    exog = np.asarray(ols_result.model.exog, dtype=float)
+
+    bp_stat, bp_p, _, _ = het_breuschpagan(resid, exog)
+    white_stat, white_p, _, _ = het_white(resid, exog)
+    jb_stat, jb_p, resid_skew, resid_kurtosis = jarque_bera(resid)
+    dw_stat = float(durbin_watson(resid))
+    qq_theor, qq_samp = stats.probplot(resid, dist="norm", fit=False)
+
+    homoscedastic = bool(bp_p >= alpha and white_p >= alpha)
+
+    return {
+        "n": int(len(resid)),
+        "alpha": alpha,
+        "breusch_pagan_stat": float(bp_stat),
+        "breusch_pagan_p": float(bp_p),
+        "breusch_pagan_decision": _decision_text(float(bp_p), alpha),
+        "white_stat": float(white_stat),
+        "white_p": float(white_p),
+        "white_decision": _decision_text(float(white_p), alpha),
+        "homoscedastic": homoscedastic,
+        "recommend_hc3": not homoscedastic,
+        "jarque_bera_stat": float(jb_stat),
+        "jarque_bera_p": float(jb_p),
+        "jarque_bera_decision": _decision_text(float(jb_p), alpha),
+        "resid_skew": float(resid_skew),
+        "resid_kurtosis_excess": float(resid_kurtosis) - 3.0,
+        "durbin_watson": dw_stat,
+        "durbin_watson_note": (
+            "Informativo: con datos transversales el orden de las filas es arbitrario, "
+            "por lo que Durbin-Watson no tiene la interpretación de autocorrelación para la "
+            "que fue diseñado; se reporta solo porque lo pide la cátedra."
+        ),
+        "qq_theoretical": np.asarray(qq_theor, dtype=float),
+        "qq_sample": np.asarray(qq_samp, dtype=float),
+    }
 
 
-def vif_table(X):
-    """VIF_j = 1/(1-R_j²) con constante; marca >5 y >10. TODO."""
-    raise NotImplementedError
+def influence_diagnostics(ols_result, cook_alarm: float = 0.5) -> pd.DataFrame:
+    """Descomposición de observaciones extremas de un resultado de `fit_ols`.
+
+    Una fila por observación, distinguiendo los tres conceptos:
+        - Outlier en Y: residuo estudentizado externo |r| > 3.
+        - Leverage (outlier en X): h_ii > 2(p+1)/n.
+        - Influencia: Cook D_i > 4/n (cribado) y D_i > `cook_alarm` (alarma, default 0.5).
+    """
+    from statsmodels.stats.outliers_influence import OLSInfluence
+
+    infl = OLSInfluence(ols_result)
+    n = int(ols_result.nobs)
+    p = int(ols_result.df_model)  # cantidad de predictores, sin contar la constante
+    leverage_threshold = 2.0 * (p + 1) / n
+    cook_screen_threshold = 4.0 / n
+
+    student_resid = np.asarray(infl.resid_studentized_external, dtype=float)
+    leverage = np.asarray(infl.hat_matrix_diag, dtype=float)
+    cooks_d = np.asarray(infl.cooks_distance[0], dtype=float)
+
+    is_outlier = np.abs(student_resid) > 3.0
+    is_high_leverage = leverage > leverage_threshold
+    is_influential = cooks_d > cook_screen_threshold
+    is_cook_alarm = cooks_d > cook_alarm
+
+    def _classify(outlier: bool, lev: bool, infl_flag: bool) -> str:
+        tags = []
+        if outlier:
+            tags.append("outlier(Y)")
+        if lev:
+            tags.append("leverage(X)")
+        if infl_flag:
+            tags.append("influyente(Cook)")
+        return "+".join(tags) if tags else "normal"
+
+    classification = [
+        _classify(o, lv, i)
+        for o, lv, i in zip(is_outlier, is_high_leverage, is_influential, strict=True)
+    ]
+
+    row_labels = ols_result.model.data.row_labels
+    obs_index = np.asarray(row_labels) if row_labels is not None else np.arange(n)
+
+    out = pd.DataFrame(
+        {
+            "obs_index": obs_index,
+            "studentized_resid": student_resid,
+            "leverage": leverage,
+            "cooks_d": cooks_d,
+            "is_outlier": is_outlier,
+            "is_high_leverage": is_high_leverage,
+            "is_influential": is_influential,
+            "is_cook_alarm": is_cook_alarm,
+            "classification": classification,
+        }
+    )
+    out.attrs["leverage_threshold"] = leverage_threshold
+    out.attrs["cook_screen_threshold"] = cook_screen_threshold
+    out.attrs["cook_alarm_threshold"] = cook_alarm
+    return out
+
+
+def vif_table(X: pd.DataFrame, add_constant: bool = True) -> pd.DataFrame:
+    """VIF_j = 1 / (1 - R_j²) de cada regresora contra el resto (incluye constante en el
+    ajuste auxiliar por default, sin reportarla); marca > 5 (atención) y > 10 (alto)."""
+    import statsmodels.api as sm
+    from statsmodels.stats.outliers_influence import variance_inflation_factor
+
+    design = sm.add_constant(X.astype(float), has_constant="add") if add_constant else X.astype(float)
+    design_arr = design.to_numpy()
+
+    rows = [
+        {"variable": col, "VIF": float(variance_inflation_factor(design_arr, i))}
+        for i, col in enumerate(design.columns)
+        if not (add_constant and col == "const")
+    ]
+    out = pd.DataFrame(rows).sort_values("VIF", ascending=False).reset_index(drop=True)
+    out["flag"] = np.select([out["VIF"] > 10, out["VIF"] > 5], [">10", ">5"], default="OK")
+    return out
