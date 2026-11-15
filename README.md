@@ -4,7 +4,7 @@
 ![Quality Gate](https://img.shields.io/badge/quality%20gate-ruff%20%2B%20pytest-brightgreen)
 ![Dataset](https://img.shields.io/badge/dataset-Kaggle%20N%3D2.982-informational)
 ![License](https://img.shields.io/badge/license-CC%20BY--NC--SA%204.0-lightgrey)
-![Status](https://img.shields.io/badge/status-entrega%20t%C3%A9cnica%20en%20revisi%C3%B3n-blue)
+![Status](https://img.shields.io/badge/status-v1.0%20entrega-brightgreen)
 [![Deploy](https://img.shields.io/badge/deploy-Streamlit%20Cloud-brightgreen)](https://tpi-eamr-grupo-atomos.streamlit.app/)
 
 **Cátedra:** Estadística Aplicada y Modelos de Regresión (EAyMR 2026) · Universidad Católica Argentina (UCA) · Facultad de Ingeniería y Ciencias Agrarias · **Profesor:** Iván G. Vilaboa  
@@ -109,6 +109,8 @@ flowchart LR
    # py -3.11 -m venv .venv; .\.venv\Scripts\Activate.ps1
 
    pip install -r requirements.txt
+   # O para reproducir exactamente los 163 paquetes congelados en el entorno de validación:
+   # pip install -r requirements.lock
    ```
 
 2. **Descargar el dataset crudo de Kaggle a `data/raw/E Commerce Dataset.xlsx`:**
@@ -211,7 +213,12 @@ TPI_Decision_Intelligence_EAyMR/
 │   ├── 02_guia_metodologica_paso_a_paso.md
 │   ├── 03_plan_accion_scrum_72hs.md
 │   ├── 04_esqueleto_slides.md          # Guion estructural de la defensa oral (12 slides)
-│   └── 04_esqueleto_slides.pdf         # Esqueleto preliminar en PDF (12 páginas)
+│   ├── 04_esqueleto_slides.pdf         # Esqueleto preliminar en PDF (12 páginas)
+│   └── slides/                         # Slides finales de la defensa (LaTeX/Beamer)
+│       ├── slides_defensa.pdf          # Presentación final (12 slides, 16:9)
+│       ├── slides_defensa.tex          # Fuente; compila con LuaLaTeX
+│       ├── fig/                        # Gráficos (PDF) y capturas de la app
+│       └── scripts/                    # Generan los gráficos y las capturas
 ├── notebooks/
 │   └── TP_Integrador_Final.ipynb       # Notebook maestro (Secciones 0, 1, 3, 4, 5, 6, 7 y 8; Fase 2 pendiente)
 ├── src/
@@ -240,6 +247,7 @@ TPI_Decision_Intelligence_EAyMR/
 
 * **Bitácora de ingeniería (5 entradas + trazabilidad IA):** [`BITACORA.md`](BITACORA.md)
 * **Notebook maestro:** [`notebooks/TP_Integrador_Final.ipynb`](notebooks/TP_Integrador_Final.ipynb)
+* **Slides de la defensa oral (PDF):** [`docs/slides/slides_defensa.pdf`](docs/slides/slides_defensa.pdf)
 * **Esqueleto de presentación (defensa oral):** [`docs/04_esqueleto_slides.md`](docs/04_esqueleto_slides.md) · [`docs/04_esqueleto_slides.pdf`](docs/04_esqueleto_slides.pdf)
 * **Web App desplegada (Streamlit Community Cloud):** [https://tpi-eamr-grupo-atomos.streamlit.app/](https://tpi-eamr-grupo-atomos.streamlit.app/)
 

@@ -6,10 +6,10 @@
 
 | Rol | Integrante | Firma |
 |---|---|---|
-| 👑 Project Lead & Scrum Master (PO) | **Carola Nasif** | ☐ |
-| ⚙️ Backend & ML / Causal Engineer | **Julián Agustín Lozano** | ☐ |
-| 🎨 Frontend & UI/UX Engineer | **Emilia Mortarini** | ☐ |
-| 🔍 QA & Validation Engineer | **Emilia Mortarini** (co-auditoría cruzada con Carola Nasif) | ☐ |
+| 👑 Project Lead & Scrum Master (PO) | **Carola Nasif** | ☑ 2026-11-15 |
+| ⚙️ Backend & ML / Causal Engineer | **Julián Agustín Lozano** | ☑ 2026-11-15 |
+| 🎨 Frontend & UI/UX Engineer | **Emilia Mortarini** | ☑ 2026-11-15 |
+| 🔍 QA & Validation Engineer | **Emilia Mortarini** (co-auditoría cruzada con Carola Nasif) | ☑ 2026-11-15 |
 
 ---
 
@@ -104,7 +104,7 @@ El VIF observado ($1,72$ / $1,71$) es coherente con la segunda fila, que es la q
 ---
 
 ## Entrada 3 — Autopsia de Experimentos Fallidos (Data Autopsy)
-**Responsable:** Backend & ML + QA · **Estado:** 🟢 3 experimentos registrados (mínimo 2) · **revisada por QA con 3 observaciones abiertas** — Emilia Mortarini, 2026-11-14 21:40. Se verificaron contra los datos y los artefactos 22 afirmaciones falsables (todas las métricas de NB/logística/RF/RF+isotónica/CART, los α de poda, la estructura de copias, 5.630→2.982 y el churn 16,84%→17,30%): coinciden. Quedan 3 cifras a corregir por Backend & ML, detalladas en la Sesión IA-11 de la Entrada 5; ninguna invalida las conclusiones de los experimentos. **Observaciones resueltas** por Julián Agustín Lozano `[2026-11-14 21:39]` (Sesión IA-09): las 3 cifras verificadas contra el código y corregidas en el texto.
+**Responsable:** Backend & ML + QA · **Estado:** 🟢 3 experimentos registrados (mínimo 2) · **revisada por QA, 3 observaciones resueltas en el PR #21** — Emilia Mortarini, 2026-11-14 21:40. Se verificaron contra los datos y los artefactos 22 afirmaciones falsables (todas las métricas de NB/logística/RF/RF+isotónica/CART, los α de poda, la estructura de copias, 5.630→2.982 y el churn 16,84%→17,30%): coinciden. Quedan 3 cifras a corregir por Backend & ML, detalladas en la Sesión IA-11 de la Entrada 5; ninguna invalida las conclusiones de los experimentos. **Observaciones resueltas** por Julián Agustín Lozano `[2026-11-14 21:39]` (Sesión IA-09): las 3 cifras verificadas contra el código y corregidas en el texto.
 
 ### Experimento fallido #1 — Torneo predictivo "demasiado bueno": copias casi duplicadas del dataset
 `[2026-11-14 16:22] · Julián Agustín Lozano (Backend & ML)`
@@ -227,7 +227,7 @@ Efecto sobre la probabilidad de churn, en pp (negativo = el cupón retiene):
 ---
 
 ## Entrada 5 — Trazabilidad y Uso Ético de Asistentes de IA
-**Responsable:** QA & Validation Engineer (con aportes de todos) · **Estado:** 🟢 abierta (registro vivo)
+**Responsable:** QA & Validation Engineer (con aportes de todos) · **Estado:** 🟢 CERRADA al code freeze (2026-11-15 23:59)
 
 **Política del equipo:** la IA se usa como *tutor y acelerador*, nunca como fuente de verdad. Toda afirmación numérica o de API generada por IA se verifica contra (a) los datos, (b) la documentación oficial o (c) un test determinístico antes de entrar a `main`.
 
@@ -430,5 +430,54 @@ Efecto sobre la probabilidad de churn, en pp (negativo = el cupón retiene):
   - Test de regresión sobre los artefactos reales: con las entradas como llegan del formulario, las predicciones coinciden con las del modelo en los 597 clientes de Test.
   - Verificación: `ruff check .` sin errores; `pytest -q` 87 passed; la app en un venv limpio con solo `app/requirements.txt` (`streamlit.testing.AppTest`) carga y predice sin excepciones; la app local, revisada en el navegador.
 
-#### Sesión IA-13 · _fecha_ · _tema_
-- Herramienta / modelo · Operador · Prompt · Qué se aceptó · Qué se rechazó y por qué · Test asociado.
+#### Sesión IA-13 · 2026-11-15 11:30-12:00 · Cierre de entrega (PR #24, reboot de Streamlit Cloud, corrección de `.devcontainer`, bibliografía Fase 2 y cierre de Entrada 5)
+- **Herramienta:** Google Antigravity (agente de IA con acceso al repositorio local y subagente de navegador).
+- **Operador:** Carola Nasif (Project Lead & Scrum Master).
+- **Prompt (resumen fiel):** "1) Mergear el PR #24 (con [APROBADO] de Emilia) con 'Create a merge commit' y ejecutar 'Reboot app' en Manage app de Streamlit Cloud para evitar caché residual, verificando que la app cargue. 2) Abrir PR Draft en rama `chore/cierre-entrega` desde `main` actualizado: cambiar `streamlit run src/__init__.py` por `streamlit run app/app.py` en `.devcontainer/devcontainer.json`, cerrar el Estado de la Entrada 5 al code freeze (`2026-11-15 23:59`), completar `Sesión IA-13` dejando reservada `Sesión IA-14` para Emilia, sumar en la Sección 7 del notebook maestro las citas de Fase 2 (Breusch y Pagan 1979; White 1980; MacKinnon y White 1985; Cook 1977) y actualizar el badge de estado en `README.md` a `v1.0 entrega`."
+- **Qué se hizo:**
+  - **Merge del PR #24 (`418c23c`) y *Reboot app* en Streamlit Community Cloud:** se mergeó `feat/app-explicacion-local` con `--merge` y se reinició el contenedor en `https://tpi-eamr-grupo-atomos.streamlit.app/`, confirmando que la aplicación levanta sin errores ni caché residual.
+  - **Rama `chore/cierre-entrega` (PR Draft de cierre):**
+    1. `.devcontainer/devcontainer.json`: reemplazado `src/__init__.py` por `app/app.py` en `openFiles` y `postAttachCommand.server` (resolviendo la observación #1 de QA del PR #22 para que GitHub Codespaces levante directamente la app interactiva).
+    2. `notebooks/TP_Integrador_Final.ipynb`: incorporadas en la **Sección 7 (Referencias Bibliográficas)** las 4 referencias econométricas de Fase 2 —Breusch & Pagan (1979, *Econometrica*), Cook (1977, *Technometrics*), MacKinnon & White (1985, *Journal of Econometrics*) y White (1980, *Econometrica*)— y ajustado el epígrafe de `Tabla 2.1` a `(nunca se afirma "aceptar H0")` (observación #2 de QA del PR #22).
+    3. `README.md`: actualizado el badge de estado a `v1.0 entrega` y agregada la opción de reproducción exacta con `pip install -r requirements.lock`.
+    4. `BITACORA.md`: firmada la fila de Project Lead (`☑ 2026-11-15`), actualizado el Estado de la **Entrada 5** a `🟢 CERRADA al code freeze (2026-11-15 23:59)`, registrada esta `Sesión IA-13` y reservada la `Sesión IA-14` para el cierre QA de Emilia.
+- **Qué se aceptó / qué se rechazó:** Se aceptó abrir el PR de cierre en modo **Draft** para que Julián (citas de Fase 4 y firma) y Emilia (firma, Estado de Entrada 3, test de imports, verificación de los 3 módulos online y `Sesión IA-14`) sumen sus commits sobre la misma rama antes del veredicto QA final, respetando estrictamente la Regla de Oro del enunciado. Se rechazó mergear a `main` o crear el tag `v1.0-entrega` antes de contar con las firmas de los 3 integrantes, las slides finales en `docs/` y el `[APROBADO]` de QA.
+- **Test y verificación asociada:** `nbformat.validate` OK, `ruff check .` (`0` errores), `pytest -q` (`87 passed`) y verificación de carga post-reboot en `https://tpi-eamr-grupo-atomos.streamlit.app/`.
+
+#### Sesión IA-14 · 2026-11-15 10:00-18:10 · Quality Gate del PR #24 y cierre de QA
+- **Herramienta:** Claude Code (Claude Opus 5), con acceso al repositorio local y al navegador.
+- **Operador:** Emilia Mortarini (Frontend & UI/UX + QA & Validation Engineer).
+- **Prompts (resumen fiel):** "Quality Gate del PR #24: ruff + pytest, explicación por caso del Módulo 2, bug de `CityTier`, Sesión IA-12, y decidí como Frontend si aceptás que la app importe `src`" · "Último paso para cerrar: firmas, Estado de la Entrada 3, Sesión IA-14 y veredicto del PR #25".
+- **Qué se hizo:** veredicto `[APROBADO]` del PR #24 (`ruff` 0 errores, `pytest` 87 passed) reproduciendo las cifras del bug de `CityTier` de forma independiente (**78,7%** de los 2.982 perfiles afectados, promedio **2,7 pp**, máximo **51,8 pp**; tras `align_to_train`, diferencia exactamente 0 en los 597 de Test) y verificando los invariantes de `local_explanation` (aportes 0 para el cliente típico; `Complain` aislado +2,0 pp; en un perfil `Tenure=0` + reclamo, `Tenure` +46,5 pp y `Complain` +45,5 pp). Verificación final de los 3 módulos en `https://tpi-eamr-grupo-atomos.streamlit.app/`, firmas de Frontend y QA, y cierre de la Entrada 3.
+- **Decisión revertida sobre una propia (IA-11):** se aceptó que la app importe `src.models` y `src.preprocessing`. La razón original —no arrastrar dependencias pesadas al deploy— no se cumple: los imports **a nivel de módulo** de esos dos archivos son solo `numpy`, `pandas`, `sklearn`, `scipy` y stdlib (`statsmodels` está importado dentro de funciones), y en un venv limpio con solo `app/requirements.txt` se verificó que `statsmodels`, `dowhy`, `econml`, `pingouin`, `lightgbm`, `shap`, `matplotlib` y `seaborn` están **ausentes** y la app igual carga, predice y responde HTTP 200. Además la regla de arquitectura de `src/__init__.py` pide importar desde `src` y no duplicar lógica en `app/app.py`: la desviación era la de IA-11.
+- **Riesgo aceptado conscientemente:** esa compatibilidad depende de que nadie promueva un `import statsmodels` (o similar) al nivel de módulo de `src/models.py` o `src/preprocessing.py`. Si ocurre, el deploy se rompe y **ningún test lo detecta**, porque el entorno de desarrollo tiene todo instalado. Se prototipó un resguardo determinístico (exigir que los imports de módulo sean subconjunto de `app/requirements.txt` + stdlib, que hoy pasa) y el equipo decidió **no incorporarlo** a menos de 24 h del freeze, para no tocar la suite de tests ya verificada. Queda registrado como deuda técnica conocida.
+- **Qué se aceptó / qué se rechazó:** se rechazó firmar la Entrada 3 como revisión limpia mientras las 3 observaciones seguían abiertas (se firmó recién tras verificar su resolución en el PR #23). Se rechazó también dar por buena la verificación ajena del punto anterior: se repitió el chequeo de dependencias de forma independiente, estática y dinámica, antes de revertir la decisión propia.
+- **Test y verificación asociada:** `ruff check .` sin errores · `pytest -q` **87 passed, 0 skipped** · venv limpio con solo `app/requirements.txt` (`streamlit run app/app.py` → HTTP 200) · verificación E2E en producción de los 3 módulos.
+
+#### Sesión IA-15 · 2026-11-15 12:10-17:45 · Slides de la defensa (Beamer), revisión por rol contra el enunciado, citas de Fase 4 y firma de Backend & ML
+- **Herramienta:** Claude Code (Claude Opus 5.5 al inicio y Claude Fable 5.2 después), con acceso al repositorio local.
+- **Operador:** Julián Agustín Lozano (Backend & ML / Causal Engineer).
+- **Prompts (resumen fiel):** "Armá todas las slides pero localmente, no subas nada; quiero mirar y verificar yo" · "¿Y si lo generás en LaTeX?" · "Ponete en el rol de cada uno de los tres, revisalas y decime qué sobra o falta" · "Aplicá las correcciones" · "Subilas al #25".
+- **Qué se hizo:**
+  - **Slides de la defensa** en `docs/slides/`: 12 slides en LaTeX/Beamer (`slides_defensa.tex` → `slides_defensa.pdf`), a partir del guion de `docs/04_esqueleto_slides.md`. Se eligió LaTeX en lugar de PowerPoint a propuesta del operador: el enunciado pide PDF, las fórmulas salen nativas y el fuente se revisa en un PR.
+  - **Gráficos propios para las slides** (`docs/slides/scripts/figs.py`): churn según reclamo, Q-Q y residuos del MCO, curvas ROC, calibración, MDI vs. permutación y forest plot, dibujados al tamaño real de la slide. Las curvas ROC y de calibración salen de reentrenar el torneo **en memoria, sin guardar artefactos** (`curves.py`): reproduce los AUC de `model_results.json` (0,8870 / 0,7544 / 0,8355 / 0,9434 / 0,9461).
+  - **Capturas de la app** con Edge vía Playwright sobre la app local (`shots.py`), mismo código que la versión desplegada.
+  - **Notebook, Sección 7:** se agregan Rosenbaum y Rubin (1983) y Austin (2009), verificadas por búsqueda web (revista, volumen y páginas). Quedan 18 referencias; el notebook sigue con 101 celdas.
+  - **Firma** de Backend & ML en la tabla de roles.
+- **Correcciones al guion previo, detectadas al contrastarlo con los artefactos y con la Entrada 2:**
+  1. Limpieza: el guion decía 1.469 pares con `CouponUsed` distinto (cifra ya corregida a 1.472 en la Entrada 3); en la slide se muestra la cuenta que cierra: 5.630 − 2.638 copias − 10 duplicados exactos = 2.982.
+  2. Fase 2: el guion hablaba de "fuerte dependencia" entre `OrderCount` y `CouponUsed`; la Entrada 2 concluye lo contrario (VIF 1,72 y 1,71). Se usó lo de la Entrada 2.
+  3. Respaldo: se quitó una "sensibilidad excluyendo `SatisfactionScore` y `HourSpendOnApp`" que no existe en el notebook.
+- **Errores de la IA en esta sesión y cómo se detectaron** (todos en la primera versión de las slides, al pedir el operador una revisión por rol):
+  1. **Gráficos ilegibles:** se insertaron las figuras del notebook achicadas; sus etiquetas equivalían a letra de 5 a 7 puntos. Se redibujaron.
+  2. **"En bruto, 18,0% vs. 18,4%":** esas tasas son de la población con soporte común. En la muestra completa son **17,9% vs. 18,4%** (recalculado sobre `dataset_clean.parquet`).
+  3. **"Los faltantes no son al azar":** impreciso; MAR significa justamente al azar condicional a lo observado. Corregido a "no son completamente al azar: se rechaza MCAR".
+  4. **0,932 y 0,948 como AUC de CV "sin copias" en la misma slide:** los dos son correctos pero de corridas distintas (el 0,948 es el RF de 300 árboles de la autopsia). Se quitó el segundo.
+  5. **"87 tests":** cifra que queda vieja con el próximo test; se quitó el número.
+  6. **Estimación incumplida:** la IA dijo que recortaría el texto un 40%; midiendo, bajó un 15% (de 113 a 96 palabras por slide), porque lo que faltaba del enunciado sumó texto.
+- **Qué se aceptó / qué se rechazó:**
+  - Se aceptó agregar lo que pide el enunciado y no estaba: hipótesis nulas con su test, odds ratio del reclamo (7,0; IC 95%: 5,1 a 9,6), sesgo de confusión (+0,81 pp), el porqué del sesgo del MDI y el punto del ensayo crítico.
+  - Se rechazó una slide 13 de respaldo: el enunciado fija el máximo en 12.
+  - Se rechazó instalar paquetes de LaTeX o `shap` en la máquina: los gráficos se hicieron con lo ya disponible (TikZ y matplotlib).
+- **Pendiente de terceros:** las slides 1, 3, 4, 9, 10 y 11 las presentan la PL y QA/Frontend; cambiaron respecto del guion y cada una debe revisar la suya.
+- **Test y verificación asociada:** `ruff check .` sin errores (incluye `docs/slides/scripts/`), `pytest -q` en verde, `nbformat.validate` OK, compilación con LuaLaTeX sin errores y revisión visual de las 12 slides renderizadas.
