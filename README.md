@@ -213,7 +213,12 @@ TPI_Decision_Intelligence_EAyMR/
 │   ├── 02_guia_metodologica_paso_a_paso.md
 │   ├── 03_plan_accion_scrum_72hs.md
 │   ├── 04_esqueleto_slides.md          # Guion estructural de la defensa oral (12 slides)
-│   └── 04_esqueleto_slides.pdf         # Esqueleto preliminar en PDF (12 páginas)
+│   ├── 04_esqueleto_slides.pdf         # Esqueleto preliminar en PDF (12 páginas)
+│   └── slides/                         # Slides finales de la defensa (LaTeX/Beamer)
+│       ├── slides_defensa.pdf          # Presentación final (12 slides, 16:9)
+│       ├── slides_defensa.tex          # Fuente; compila con LuaLaTeX
+│       ├── fig/                        # Gráficos (PDF) y capturas de la app
+│       └── scripts/                    # Generan los gráficos y las capturas
 ├── notebooks/
 │   └── TP_Integrador_Final.ipynb       # Notebook maestro (Secciones 0, 1, 3, 4, 5, 6, 7 y 8; Fase 2 pendiente)
 ├── src/
@@ -242,6 +247,7 @@ TPI_Decision_Intelligence_EAyMR/
 
 * **Bitácora de ingeniería (5 entradas + trazabilidad IA):** [`BITACORA.md`](BITACORA.md)
 * **Notebook maestro:** [`notebooks/TP_Integrador_Final.ipynb`](notebooks/TP_Integrador_Final.ipynb)
+* **Slides de la defensa oral (PDF):** [`docs/slides/slides_defensa.pdf`](docs/slides/slides_defensa.pdf)
 * **Esqueleto de presentación (defensa oral):** [`docs/04_esqueleto_slides.md`](docs/04_esqueleto_slides.md) · [`docs/04_esqueleto_slides.pdf`](docs/04_esqueleto_slides.pdf)
 * **Web App desplegada (Streamlit Community Cloud):** [https://tpi-eamr-grupo-atomos.streamlit.app/](https://tpi-eamr-grupo-atomos.streamlit.app/)
 

@@ -7,7 +7,7 @@
 | Rol | Integrante | Firma |
 |---|---|---|
 | 👑 Project Lead & Scrum Master (PO) | **Carola Nasif** | ☑ 2026-11-15 |
-| ⚙️ Backend & ML / Causal Engineer | **Julián Agustín Lozano** | ☐ |
+| ⚙️ Backend & ML / Causal Engineer | **Julián Agustín Lozano** | ☑ 2026-11-15 |
 | 🎨 Frontend & UI/UX Engineer | **Emilia Mortarini** | ☐ |
 | 🔍 QA & Validation Engineer | **Emilia Mortarini** (co-auditoría cruzada con Carola Nasif) | ☐ |
 
@@ -446,3 +446,31 @@ Efecto sobre la probabilidad de churn, en pp (negativo = el cupón retiene):
 
 #### Sesión IA-14 · _fecha_ · _tema_ — *reservada para Emilia Mortarini*
 - Herramienta / modelo · Operador · Prompt · Qué se aceptó · Qué se rechazó y por qué · Test asociado.
+
+#### Sesión IA-15 · 2026-11-15 12:10-17:45 · Slides de la defensa (Beamer), revisión por rol contra el enunciado, citas de Fase 4 y firma de Backend & ML
+- **Herramienta:** Claude Code (Claude Opus 5.5 al inicio y Claude Fable 5.2 después), con acceso al repositorio local.
+- **Operador:** Julián Agustín Lozano (Backend & ML / Causal Engineer).
+- **Prompts (resumen fiel):** "Armá todas las slides pero localmente, no subas nada; quiero mirar y verificar yo" · "¿Y si lo generás en LaTeX?" · "Ponete en el rol de cada uno de los tres, revisalas y decime qué sobra o falta" · "Aplicá las correcciones" · "Subilas al #25".
+- **Qué se hizo:**
+  - **Slides de la defensa** en `docs/slides/`: 12 slides en LaTeX/Beamer (`slides_defensa.tex` → `slides_defensa.pdf`), a partir del guion de `docs/04_esqueleto_slides.md`. Se eligió LaTeX en lugar de PowerPoint a propuesta del operador: el enunciado pide PDF, las fórmulas salen nativas y el fuente se revisa en un PR.
+  - **Gráficos propios para las slides** (`docs/slides/scripts/figs.py`): churn según reclamo, Q-Q y residuos del MCO, curvas ROC, calibración, MDI vs. permutación y forest plot, dibujados al tamaño real de la slide. Las curvas ROC y de calibración salen de reentrenar el torneo **en memoria, sin guardar artefactos** (`curves.py`): reproduce los AUC de `model_results.json` (0,8870 / 0,7544 / 0,8355 / 0,9434 / 0,9461).
+  - **Capturas de la app** con Edge vía Playwright sobre la app local (`shots.py`), mismo código que la versión desplegada.
+  - **Notebook, Sección 7:** se agregan Rosenbaum y Rubin (1983) y Austin (2009), verificadas por búsqueda web (revista, volumen y páginas). Quedan 18 referencias; el notebook sigue con 101 celdas.
+  - **Firma** de Backend & ML en la tabla de roles.
+- **Correcciones al guion previo, detectadas al contrastarlo con los artefactos y con la Entrada 2:**
+  1. Limpieza: el guion decía 1.469 pares con `CouponUsed` distinto (cifra ya corregida a 1.472 en la Entrada 3); en la slide se muestra la cuenta que cierra: 5.630 − 2.638 copias − 10 duplicados exactos = 2.982.
+  2. Fase 2: el guion hablaba de "fuerte dependencia" entre `OrderCount` y `CouponUsed`; la Entrada 2 concluye lo contrario (VIF 1,72 y 1,71). Se usó lo de la Entrada 2.
+  3. Respaldo: se quitó una "sensibilidad excluyendo `SatisfactionScore` y `HourSpendOnApp`" que no existe en el notebook.
+- **Errores de la IA en esta sesión y cómo se detectaron** (todos en la primera versión de las slides, al pedir el operador una revisión por rol):
+  1. **Gráficos ilegibles:** se insertaron las figuras del notebook achicadas; sus etiquetas equivalían a letra de 5 a 7 puntos. Se redibujaron.
+  2. **"En bruto, 18,0% vs. 18,4%":** esas tasas son de la población con soporte común. En la muestra completa son **17,9% vs. 18,4%** (recalculado sobre `dataset_clean.parquet`).
+  3. **"Los faltantes no son al azar":** impreciso; MAR significa justamente al azar condicional a lo observado. Corregido a "no son completamente al azar: se rechaza MCAR".
+  4. **0,932 y 0,948 como AUC de CV "sin copias" en la misma slide:** los dos son correctos pero de corridas distintas (el 0,948 es el RF de 300 árboles de la autopsia). Se quitó el segundo.
+  5. **"87 tests":** cifra que queda vieja con el próximo test; se quitó el número.
+  6. **Estimación incumplida:** la IA dijo que recortaría el texto un 40%; midiendo, bajó un 15% (de 113 a 96 palabras por slide), porque lo que faltaba del enunciado sumó texto.
+- **Qué se aceptó / qué se rechazó:**
+  - Se aceptó agregar lo que pide el enunciado y no estaba: hipótesis nulas con su test, odds ratio del reclamo (7,0; IC 95%: 5,1 a 9,6), sesgo de confusión (+0,81 pp), el porqué del sesgo del MDI y el punto del ensayo crítico.
+  - Se rechazó una slide 13 de respaldo: el enunciado fija el máximo en 12.
+  - Se rechazó instalar paquetes de LaTeX o `shap` en la máquina: los gráficos se hicieron con lo ya disponible (TikZ y matplotlib).
+- **Pendiente de terceros:** las slides 1, 3, 4, 9, 10 y 11 las presentan la PL y QA/Frontend; cambiaron respecto del guion y cada una debe revisar la suya.
+- **Test y verificación asociada:** `ruff check .` sin errores (incluye `docs/slides/scripts/`), `pytest -q` en verde, `nbformat.validate` OK, compilación con LuaLaTeX sin errores y revisión visual de las 12 slides renderizadas.

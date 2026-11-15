@@ -2,7 +2,8 @@
 
 > **Estado:** Esqueleto v1.0 con títulos, mensajes clave y cifras verificadas (fases 1, 3 y 4).  
 > **Pendiente:** insertar las figuras finales cuando estén integrados los notebooks de Fases 2, 3 y 4, más capturas reales de la Web App en Streamlit.  
-> **Versión PDF preliminar:** [`docs/04_esqueleto_slides.pdf`](04_esqueleto_slides.pdf).
+> **Versión PDF preliminar:** [`docs/04_esqueleto_slides.pdf`](04_esqueleto_slides.pdf).  
+> **Slides finales (2026-11-15):** [`docs/slides/slides_defensa.pdf`](slides/slides_defensa.pdf), con figuras y capturas. Las cifras de este guion que cambiaron están anotadas en la Sesión IA-15 de la bitácora.
 
 ---
 
